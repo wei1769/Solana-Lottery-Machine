@@ -1,12 +1,28 @@
+use solana_sdk::{
+    instruction::{AccountMeta, Instruction},
+    pubkey::Pubkey,
+};
+use std::str::FromStr;
+pub fn get_pub(pubkey: &str) -> Pubkey {
+    Pubkey::from_str(pubkey).unwrap()
+}
+pub fn getkey(public_key: Pubkey, is_signer: bool, is_writable: bool) -> AccountMeta {
+    if is_writable {
+        AccountMeta::new(public_key, is_signer)
+    } else {
+        AccountMeta::new_readonly(public_key, is_signer)
+    }
+}
+
 use solana_program::{
     program_error::ProgramError,
     program_pack::{IsInitialized, Pack, Sealed},
-    pubkey::Pubkey,
+    
 };
 
 use arrayref::{array_mut_ref, array_ref, array_refs, mut_array_refs};
 pub struct Lottery  {
-    pub account_type: u8,//1 is lottery ,3 is ended Lottery size:1
+    pub account_type: u8,//1 is pool size:1
     pub authority: Pubkey,//size:32
     pub token_reciever: Pubkey,//size:32
     pub fee_reciever: Pubkey,//size:32
@@ -172,6 +188,10 @@ impl Pack for Lottery {
 
     }
 }
+
+
+
+
 
 
 
