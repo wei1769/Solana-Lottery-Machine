@@ -6,13 +6,14 @@ use solana_program::{
 
 use arrayref::{array_mut_ref, array_ref, array_refs, mut_array_refs};
 pub struct Lottery  {
-    pub account_type: u8,//1 is pool size:1
+    pub account_type: u8,//1 is lottery ,3 is ended Lottery size:1
     pub authority: Pubkey,//size:32
     pub token_reciever: Pubkey,//size:32
     pub fee_reciever: Pubkey,//size:32
     pub max_amount: u64,//size:8
     pub ended_slot:  u64,//size:8
     pub lottery_number: u64,//size:8
+    pub current_amount: u64,
 
     //Lottery account size should be 121 Bytes
 }
@@ -99,7 +100,7 @@ impl IsInitialized for Lottery{
 
 
 impl Pack for Lottery {
-    const LEN: usize = 121;
+    const LEN: usize = 129;
     fn unpack_from_slice(src: &[u8]) -> Result<Self, ProgramError> {
         
         let src = array_ref![src, 0, Lottery::LEN];
@@ -110,7 +111,8 @@ impl Pack for Lottery {
             _max_amount,
             _ended_slot,
             _lottery_number,
-        ) = array_refs![src, 1, 32,32,32,8,8,8];
+            _current_amount,
+        ) = array_refs![src, 1, 32,32,32,8,8,8,8];
         
         let account_type =u8::from_le_bytes(*_account_type);
         
@@ -120,6 +122,7 @@ impl Pack for Lottery {
         let max_amount = u64::from_le_bytes(*_max_amount);
         let ended_slot = u64::from_le_bytes(*_ended_slot);
         let lottery_number = u64::from_le_bytes(*_lottery_number);
+        let current_amount = u64::from_le_bytes(*_current_amount);
         Ok(Lottery{
             account_type,
             authority,
@@ -128,6 +131,8 @@ impl Pack for Lottery {
             max_amount,
             ended_slot,
             lottery_number,
+            current_amount,
+
         })
     }
     fn pack_into_slice(&self, dst: &mut [u8]) {
@@ -140,8 +145,8 @@ impl Pack for Lottery {
             _max_amount_dst,
             _ended_slot_dst,
             _lottery_number_dst,
-            
-        ) = mut_array_refs![dst, 1, 32,32,32,8,8,8];
+            _current_amount_dst,
+        ) = mut_array_refs![dst, 1, 32,32,32,8,8,8,8];
 
         let Lottery{
             account_type,
@@ -151,7 +156,7 @@ impl Pack for Lottery {
             max_amount,
             ended_slot,
             lottery_number,
-            
+            current_amount,            
         } = self;
         _account_type_dst[0] = *account_type as u8;
         _authority_dst.copy_from_slice(authority.as_ref());
@@ -161,7 +166,7 @@ impl Pack for Lottery {
         *_max_amount_dst = max_amount.to_le_bytes();
         *_ended_slot_dst = ended_slot.to_le_bytes();
         *_lottery_number_dst = lottery_number.to_le_bytes();
-
+        *_current_amount_dst = current_amount.to_le_bytes();
 
 
 

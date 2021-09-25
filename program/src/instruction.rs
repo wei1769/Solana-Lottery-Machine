@@ -3,12 +3,12 @@ use solana_program::{msg, program_error::ProgramError};
 use std::convert::TryInto;
 use std::fmt::format;
 pub enum LotteryMachineInstructions {
-    /// 0.`[writable]` lottery id
+    /// 0.`[writable,signer]` lottery id
     /// 1.`[writable,signer]` lottery authority
     /// 2.`[]` fee authority
-    /// 3.`[]` lottery PDA
+    /// 3.`[writable]` lottery PDA
     /// 4.`[writable]` lottery associated token account
-    /// 5.`[]` fee associated token account
+    /// 5.`[writable]` fee associated token account
     /// 6.`[]` Associated Token Program
     /// 7.`[]` token mint
     /// 8.`[]` token program
@@ -18,15 +18,17 @@ pub enum LotteryMachineInstructions {
     
     InitLottery {
         max_amount:u64,
-        slot: u64, //slot ended
+        slot: u64, //how mant slot this Lottery last
     },
-    /// 0.`[]` lottery id
-    /// 1.`[writable]` ticket id
-    /// 2.`[signer]` buyer authority
+    /// 0.`[writable]` lottery id
+    /// 1.`[writable,signer]` ticket id
+    /// 2.`[writable,signer]` buyer authority
     /// 3.`[writable]` lottery associated token account
     /// 4.`[writable]` authority token account
     /// 5.`[]` token program
     /// 6.`[]` Sysvar: Clock
+    /// 7.`[]` system program
+    /// 8.`[]` Sysvar Rent
     Buy {
         amount: u64,// amount to participate
     },
