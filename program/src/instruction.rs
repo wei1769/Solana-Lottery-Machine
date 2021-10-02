@@ -1,4 +1,4 @@
-use crate::{error::LotteryError::InvalidInstruction};
+use crate::error::LotteryError::InvalidInstruction;
 use solana_program::{msg, program_error::ProgramError};
 use std::convert::TryInto;
 use std::fmt::format;
@@ -15,9 +15,8 @@ pub enum LotteryMachineInstructions {
     /// 9.`[]` system program
     /// 10.`[]` Sysvar Clock
     /// 11.`[]` Sysvar Rent
-    
     InitLottery {
-        max_amount:u64,
+        max_amount: u64,
         slot: u64, //how mant slot this Lottery last
     },
     /// 0.`[writable]` lottery id
@@ -30,15 +29,13 @@ pub enum LotteryMachineInstructions {
     /// 7.`[]` system program
     /// 8.`[]` Sysvar Rent
     Buy {
-        amount: u64,// amount to participate
+        amount: u64, // amount to participate
     },
     /// 0.`[writable]` lottery id
     /// 1.`[signer]` pool authority
-    
-    /// 2.`[]` Sysvar: Clock
-    Draw{
 
-    },
+    /// 2.`[]` Sysvar: Clock
+    Draw {},
     /// 0.`[writable]` lottery id
     /// 1.`[writable,signer]` lottery authority
     /// 2.`[writable]` lottery associated token account
@@ -52,44 +49,32 @@ pub enum LotteryMachineInstructions {
     /// 10.`[]` Sysvar Rent
     /// 11.`[]` Associated Token Program
     /// 12.`[]` Winner account
-    Withdraw{
-
-    },
+    Withdraw {},
 }
 impl LotteryMachineInstructions {
     pub fn unpack(input: &[u8]) -> Result<Self, ProgramError> {
         let (tag, rest) = input.split_first().ok_or(InvalidInstruction)?;
 
         Ok(match tag {
-                //First byte in data:
-                //0:Initialize lottery
-                //1:Buy
-
-            0 => { 
-                let (max , rest ) = Self::unpack_u64(rest).unwrap();
-                let slot  = Self::unpack_u64(rest).unwrap().0;
-                let message = format(format_args!(
-                    "slot_ended: {:?}",
-                     slot 
-                ));
+            //First byte in data:
+            //0:Initialize lottery
+            //1:Buy
+            0 => {
+                let (max, rest) = Self::unpack_u64(rest).unwrap();
+                let slot = Self::unpack_u64(rest).unwrap().0;
+                let message = format(format_args!("slot_ended: {:?}", slot));
                 msg!(&message);
                 Self::InitLottery {
-                    max_amount:max,
+                    max_amount: max,
                     slot: slot,
                 }
-            },
+            }
             1 => {
                 let amount = Self::unpack_u64(rest).unwrap().0;
-                Self::Buy{
-                    amount: amount,
-                }
-            },
-            2 => {
-                Self::Draw{}
-            },
-            3 => {
-                Self::Withdraw{}
+                Self::Buy { amount: amount }
             }
+            2 => Self::Draw {},
+            3 => Self::Withdraw {},
 
             _ => return Err(InvalidInstruction.into()),
         })

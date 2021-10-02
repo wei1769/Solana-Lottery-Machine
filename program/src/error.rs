@@ -1,5 +1,5 @@
-use thiserror::Error;
 use solana_program::program_error::ProgramError;
+use thiserror::Error;
 #[derive(Error, Debug, Copy, Clone)]
 pub enum LotteryError {
     /// Invalid instruction
@@ -11,7 +11,7 @@ pub enum LotteryError {
     #[error("Account Not Writable")]
     AccountNotWritable,
     #[error("Ticket has been sold out")]
-    PoolSoldOut
+    PoolSoldOut,
 }
 
 impl From<LotteryError> for ProgramError {
