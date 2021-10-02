@@ -1,4 +1,4 @@
-use crate::{error::TicketMachineError::InvalidInstruction};
+use crate::{error::LotteryError::InvalidInstruction};
 use solana_program::{msg, program_error::ProgramError};
 use std::convert::TryInto;
 use std::fmt::format;
@@ -34,16 +34,24 @@ pub enum LotteryMachineInstructions {
     },
     /// 0.`[writable]` lottery id
     /// 1.`[signer]` pool authority
-    /// 2.`[]` lottery associated token account
-    /// 3.`[]` Sysvar: Clock
+    
+    /// 2.`[]` Sysvar: Clock
     Draw{
 
     },
     /// 0.`[writable]` lottery id
-    /// 1.`[writablesigner]` lottery authority
+    /// 1.`[writable,signer]` lottery authority
     /// 2.`[writable]` lottery associated token account
     /// 3.`[writable]` fee associated token account
     /// 4.`[writable]` winner token account
+    /// 5.`[]` winning ticket id
+    /// 6.`[]` lottery PDA
+    /// 7.`[]` token mint
+    /// 8.`[]` token program
+    /// 9.`[]` system program
+    /// 10.`[]` Sysvar Rent
+    /// 11.`[]` Associated Token Program
+    /// 12.`[]` Winner account
     Withdraw{
 
     },

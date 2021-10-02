@@ -4,11 +4,11 @@ use std::convert::TryInto;
 use crate::{
     check_program_account,
     check_fee_account,
-    error::TicketMachineError,
+    error::LotteryError,
     instruction::LotteryMachineInstructions,
     state::{Lottery, Ticket},
 };
-use solana_program::{account_info::{next_account_info, AccountInfo}, entrypoint::ProgramResult,  msg, program::invoke, program_error::ProgramError, program_pack::Pack, pubkey::Pubkey, system_instruction::{self},  sysvar::Sysvar};
+use solana_program::{account_info::{next_account_info, AccountInfo}, entrypoint::ProgramResult, msg, program::{invoke, invoke_signed}, program_error::ProgramError, program_pack::Pack, pubkey::Pubkey, system_instruction::{self}, sysvar::Sysvar};
 use spl_token::state::Account as TokenAccount;
 use spl_token::instruction as TokenIns ;
 use spl_associated_token_account::{create_associated_token_account,get_associated_token_address} ;
@@ -43,14 +43,14 @@ impl Processor {
 
             }=> {
                 msg!("Instruction: Draw");
-                Self::process_draw()
+                Self::process_draw(accounts,program_id)
 
             }
             LotteryMachineInstructions::Withdraw {
 
             }=> {
                 msg!("Instruction: Withdraw");
-                Self::process_withdraw()
+                Self::process_withdraw(accounts,program_id)
 
             }
 
@@ -261,8 +261,38 @@ impl Processor {
     }
 
 
-    fn process_draw()->ProgramResult {
-        
+    fn process_draw(
+        accounts: &[AccountInfo],
+        program_id:&Pubkey,)->ProgramResult {
+            let account_info_iter = &mut accounts.iter();
+            let lottery_id = next_account_info(account_info_iter)?;
+            let authority = next_account_info(account_info_iter)?;
+            let clock_account  = next_account_info(account_info_iter)?;
+            msg!("unpack lottery");
+            let mut lottery_info = Lottery::unpack(&lottery_id.data.borrow())?;
+            let clock = clock::Clock::from_account_info(clock_account)?;
+
+
+
+            if !authority.is_signer {
+                msg!("Not authority");
+                return Err(ProgramError::MissingRequiredSignature);
+
+            }
+            if (lottery_info.current_amount >= lottery_info.max_amount
+            || lottery_info.ended_slot > clock.slot) && lottery_info.account_type == 1  {
+
+                lottery_info.lottery_number = 1;
+                lottery_info.account_type = 3;
+                Lottery::pack(lottery_info,&mut lottery_id.data.borrow_mut())?;
+            }
+            else {
+                msg!("lottery not ended");
+            }
+
+            
+
+
 
 
         Ok(())
@@ -270,10 +300,142 @@ impl Processor {
 
 
 
-    fn process_withdraw() ->ProgramResult {
-    
+    fn process_withdraw(
+        accounts: &[AccountInfo],
+        program_id:&Pubkey,) ->ProgramResult {
+
+        let account_info_iter = &mut accounts.iter();
+
+        let lottery_id = next_account_info(account_info_iter)?;
+        let lottery_authority = next_account_info(account_info_iter)?;
+        let lottery_ata = next_account_info(account_info_iter)?;
+        let fee_ata = next_account_info(account_info_iter)?;
+        let winner_ata = next_account_info(account_info_iter)?;
+        let winning_ticket = next_account_info(account_info_iter)?;
+        let lottery_pda = next_account_info(account_info_iter)?;
+        let token_mint = next_account_info(account_info_iter)?;
+        let token_program = next_account_info(account_info_iter)?;
+        let system_program_account  = next_account_info(account_info_iter)?;
+        let rent  = next_account_info(account_info_iter)?;
+        let ata_program  = next_account_info(account_info_iter)?;
+        let winner_account = next_account_info(account_info_iter)?;
+        
+        let writable_accounts = vec![lottery_id,lottery_authority,lottery_ata,fee_ata,winner_ata];
+        if Self::check_writable(writable_accounts) {
+            return Err(ProgramError::InvalidAccountData);
+        }
+
+        check_program_account(lottery_id.owner)?;
+        check_program_account(winning_ticket.owner)?;
+
+            
+        if winner_ata.owner != token_program.key{
+            let  lottery_ata_ix = create_associated_token_account(lottery_authority.key, winner_account.key, token_mint.key);
+            invoke(&lottery_ata_ix, 
+                &[
+                    lottery_authority.clone(),
+                    lottery_pda.clone(),
+                    winner_ata.clone(),
+                    system_program_account.clone(),
+                    rent.clone(),
+                    token_program.clone(),
+                    token_mint.clone(),
+                ])?;
+        }
+
+        let pda = 
+            Pubkey::create_program_address(&[&lottery_id.key.to_bytes().clone()], program_id)?;
+        if pda != lottery_pda.key.clone(){
+            msg!("PDA is wrong");
+            return Err(ProgramError::InvalidAccountData);
+    }
+
+        
+
+
+        let mut lottery_info = Lottery::unpack(&lottery_id.data.borrow())?;
+        let ticket_info = Ticket::unpack(&winning_ticket.data.borrow())?;
+        
+        if lottery_info.authority != lottery_authority.key.clone() && !(lottery_authority.is_signer) {
+            msg!("wrong authority");
+            return Err(ProgramError::InvalidAccountData);
+        }
+
+        if lottery_info.fee_reciever != fee_ata.key.clone(){
+            msg!("wrong fee account");
+            return Err(ProgramError::InvalidAccountData);
+        }
+
+        if lottery_info.account_type != 3{
+            msg!("Lottery haven't ended");
+            return Err(ProgramError::InvalidAccountData);
+        }
+
+        
+        if lottery_info.lottery_number <= ticket_info.end_number && lottery_info.lottery_number >= ticket_info.start_number{
+            msg!("Winner correct")
+        }
+        else {
+            msg!("Winner is wrong");
+            return Err(ProgramError::InvalidAccountData);
+        }
+        let winner_ata_info = TokenAccount::unpack(&winner_ata.data.borrow())?;
+        
+        
+        if ticket_info.buyer != winner_account.key.clone() 
+        && ticket_info.buyer != winner_ata_info.owner {
+            msg!("Winner is wrong");
+            return Err(ProgramError::InvalidAccountData);
+        }
+        let lottery_ata_info = TokenAccount::unpack(&lottery_ata.data.borrow())?;
+
+
+        let fee_amount = lottery_ata_info.amount * 20 /100;
+        let prize_amount = lottery_ata_info.amount - fee_amount;        
+
+        let transfer_fee_ix= TokenIns::transfer(token_program.key, lottery_ata.key, fee_ata.key, &pda, &[], fee_amount).unwrap();
+
+        let transfer_prize_ix= TokenIns::transfer(
+            token_program.key, 
+            lottery_ata.key, 
+            winner_ata.key, 
+            &pda, 
+            &[], 
+            prize_amount)
+            .unwrap();
+
+        invoke_signed(&transfer_fee_ix,&[
+            lottery_ata.clone(),
+            fee_ata.clone(),
+            lottery_pda.clone(),
+        ],
+        &[&[&lottery_id.key.to_bytes().clone()]])?;
+
+        invoke_signed(&transfer_prize_ix,&[
+            lottery_ata.clone(),
+            winner_ata.clone(),
+            lottery_pda.clone(),
+        ],
+        &[&[&lottery_id.key.to_bytes().clone()]])?;
+        
+        let close_ix = TokenIns::close_account(token_program.key, lottery_ata.key, lottery_authority.key, lottery_pda.key, &[])?;
+        
+
+        invoke_signed(&close_ix,&[
+            lottery_ata.clone(),
+            lottery_authority.clone(),
+            lottery_pda.clone(),
+        ],
+        &[&[&lottery_id.key.to_bytes().clone()]])?;
+
+        lottery_info.account_type = 4;
+        Lottery::pack(lottery_info,&mut lottery_id.data.borrow_mut())?;
+
+
         Ok(())
     } 
+
+
     fn check_writable(accounts:Vec<&AccountInfo>) -> bool {
         for x in accounts.iter()
          {
