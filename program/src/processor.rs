@@ -224,6 +224,8 @@ impl Processor {
         let mut ticket_info = Ticket::unpack_unchecked(&ticket_id.data.borrow())?;
         let clock = clock::Clock::from_account_info(clock_account)?;
 
+
+
         if lottery_info.ended_slot < clock.slot.clone() {
             msg!("This Lottery ends");
             return Err(ProgramError::InvalidAccountData);
@@ -240,6 +242,11 @@ impl Processor {
             msg!("Buyer isn't signer");
             return Err(ProgramError::InvalidAccountData);
         }
+        if amount <= 0  {
+            msg!("amount should be over 0");
+            return Err(ProgramError::InvalidArgument);
+        }
+
         ticket_info.lottery_id = lottery_id.key.clone();
         ticket_info.start_number = lottery_info.current_amount.clone().checked_add(1).unwrap();
         if lottery_ata.key.clone() == lottery_info.token_reciever {
@@ -248,7 +255,7 @@ impl Processor {
                 &buyer_token_account.key.clone(),
                 &lottery_info.token_reciever.clone(),
                 &buy_authority.key.clone(),
-                &[&buy_authority.key.clone()],
+                &[],
                 amount,
             )?;
             invoke(
@@ -278,7 +285,7 @@ impl Processor {
         let mut lottery_info = Lottery::unpack(&lottery_id.data.borrow())?;
         let clock = clock::Clock::from_account_info(clock_account)?;
 
-        if !authority.is_signer {
+        if !authority.is_signer && lottery_info.authority != authority.key.clone() {
             msg!("Not authority");
             return Err(ProgramError::MissingRequiredSignature);
         }
@@ -357,7 +364,7 @@ impl Processor {
         let mut lottery_info = Lottery::unpack(&lottery_id.data.borrow())?;
         let ticket_info = Ticket::unpack(&winning_ticket.data.borrow())?;
 
-        if lottery_info.authority != lottery_authority.key.clone() && !(lottery_authority.is_signer)
+        if lottery_info.authority != lottery_authority.key.clone() || !(lottery_authority.is_signer)
         {
             msg!("wrong authority");
             return Err(ProgramError::InvalidAccountData);
