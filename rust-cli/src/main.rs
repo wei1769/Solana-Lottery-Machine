@@ -1,5 +1,7 @@
 use std::borrow::Borrow;
 use base64::encode;
+use solana_account_decoder::parse_token::spl_token_v2_0_native_mint;
+use solana_program::system_instruction;
 use std::fs;
 use solana_client::rpc_client::RpcClient;
 use solana_sdk::{
@@ -53,7 +55,21 @@ fn main() {
     let mut token_mint = util::get_pub("So11111111111111111111111111111111111111112");
     // Change the token mint for the lottery
     
-    
+    if matches.is_present("wrap"){
+        let wrapped_amount:u64 = matches.value_of("wrap").unwrap().parse().unwrap();
+        let wsol_ata = spl_associated_token_account::get_associated_token_address(&wallet_publickey, &spl_token_v2_0_native_mint());
+        let ata_info = rpc_client.get_account(&wsol_ata).unwrap();
+        if !spl_token::check_id(&ata_info.owner){
+            let create_ata_ins  =  spl_associated_token_account::create_associated_token_account(&wallet_publickey, &wallet_publickey, &spl_token_v2_0_native_mint());
+            ins.push(create_ata_ins);
+        }
+        
+        let transfer_ins = system_instruction::transfer(&wallet_publickey, &wsol_ata, wrapped_amount);
+        ins.push(transfer_ins);
+        let sync_ins = spl_token::instruction::sync_native(&spl_token::id(), &wsol_ata).unwrap();
+        ins.push(sync_ins);
+
+    }
     
     let mut lottery_id = get_pub("DeaqeKSVpBo7gheD1h8cVDUoWbBQ116oZ45amzvp8eEu");
     // This is for buy, draw, withdraw
@@ -100,6 +116,7 @@ fn main() {
         println!("{:?},{:?},{:?},{:?}", data.0, data.1,data.2,data.3);
         }
     }
+
 
     if !ins.is_empty(){
         let mut tx = Transaction::new_with_payer(&ins, fee_payer);
