@@ -1,5 +1,5 @@
 use solana_sdk::{
-    instruction::{AccountMeta, Instruction},
+    instruction::{AccountMeta},
     pubkey::Pubkey,
     signature::{read_keypair_file, Keypair},
 };

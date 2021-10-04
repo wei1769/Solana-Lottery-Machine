@@ -1,21 +1,18 @@
 use std::borrow::Borrow;
 use base64::encode;
 use solana_account_decoder::parse_token::spl_token_v2_0_native_mint;
-use solana_program::system_instruction;
-use std::fs;
+use solana_program::{pubkey::Pubkey, system_instruction};
 use solana_client::rpc_client::RpcClient;
 use solana_sdk::{
     commitment_config::CommitmentConfig,
     instruction::Instruction,
-    message::Message,
-    program_pack::Pack,
-    pubkey::Pubkey,
+ 
     signature::{Keypair, Signer},
-    system_instruction::create_account,
+    
     transaction::Transaction,
 };
 use clap::{App, load_yaml};
-use crate::util::{Lottery, get_pub};
+use crate::util::{get_pub};
 mod util;
 mod lottery;
 
@@ -71,7 +68,7 @@ fn main() {
 
     }
     
-    let mut lottery_id = get_pub("DeaqeKSVpBo7gheD1h8cVDUoWbBQ116oZ45amzvp8eEu");
+    let mut lottery_id = Pubkey::default();
     // This is for buy, draw, withdraw
     let mut  instruction_signer = Keypair::new();
     if let Some(ref matches) = matches.subcommand_matches("init"){
@@ -80,7 +77,7 @@ fn main() {
         if matches.is_present("mint") {
             token_mint = util::get_pub(matches.value_of("mint").unwrap());
         }
-        let (mut init_ins, mut lottery_signer) = lottery::init_lottery(slot_last, lottery_max_amount, &token_mint, &wallet_publickey);
+        let (mut init_ins,  lottery_signer) = lottery::init_lottery(slot_last, lottery_max_amount, &token_mint, &wallet_publickey);
         println!("Lottery initialized, id: {:?}",lottery_signer.pubkey().clone());
         instruction_signer= lottery_signer;
         ins.append(&mut init_ins);
@@ -120,7 +117,7 @@ fn main() {
 
     if !ins.is_empty(){
         let mut tx = Transaction::new_with_payer(&ins, fee_payer);
-        let (recent, fee) = rpc_client
+        let (recent, _fee) = rpc_client
             .get_recent_blockhash()
             .expect("failed to get recent blockhash");
         

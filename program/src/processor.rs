@@ -2,7 +2,6 @@ use std::convert::TryInto;
 
 use crate::{
     check_fee_account, check_program_account,
-    error::LotteryError,
     instruction::LotteryMachineInstructions,
     state::{Lottery, Ticket},
 };
@@ -67,7 +66,7 @@ impl Processor {
         let lottery_pda = next_account_info(account_info_iter)?;
         let lottery_ata = next_account_info(account_info_iter)?;
         let fee_ata = next_account_info(account_info_iter)?;
-        let ata_program = next_account_info(account_info_iter)?;
+        let _ata_program = next_account_info(account_info_iter)?;
         let token_mint = next_account_info(account_info_iter)?;
         let token_program = next_account_info(account_info_iter)?;
         let system_program_account = next_account_info(account_info_iter)?;
@@ -185,7 +184,7 @@ impl Processor {
         let buyer_token_account = next_account_info(account_info_iter)?;
         let token_program = next_account_info(account_info_iter)?;
         let clock_account = next_account_info(account_info_iter)?;
-        let system_program_account = next_account_info(account_info_iter)?;
+        let _system_program_account = next_account_info(account_info_iter)?;
 
         let rent = next_account_info(account_info_iter)?;
 
@@ -276,7 +275,7 @@ impl Processor {
         Ok(())
     }
 
-    fn process_draw(accounts: &[AccountInfo], program_id: &Pubkey) -> ProgramResult {
+    fn process_draw(accounts: &[AccountInfo], _program_id: &Pubkey) -> ProgramResult {
         let account_info_iter = &mut accounts.iter();
         let lottery_id = next_account_info(account_info_iter)?;
         let authority = next_account_info(account_info_iter)?;
@@ -284,7 +283,7 @@ impl Processor {
         msg!("unpack lottery");
         let mut lottery_info = Lottery::unpack(&lottery_id.data.borrow())?;
         let clock = clock::Clock::from_account_info(clock_account)?;
-
+        check_program_account(lottery_id.key)?;
         if !authority.is_signer && lottery_info.authority != authority.key.clone() {
             msg!("Not authority");
             return Err(ProgramError::MissingRequiredSignature);
@@ -317,7 +316,7 @@ impl Processor {
         let token_program = next_account_info(account_info_iter)?;
         let system_program_account = next_account_info(account_info_iter)?;
         let rent = next_account_info(account_info_iter)?;
-        let ata_program = next_account_info(account_info_iter)?;
+        let _ata_program = next_account_info(account_info_iter)?;
         let winner_account = next_account_info(account_info_iter)?;
 
         let writable_accounts = vec![
