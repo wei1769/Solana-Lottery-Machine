@@ -1,7 +1,7 @@
 use std::borrow::Borrow;
 use base64::encode;
 use solana_account_decoder::parse_token::spl_token_v2_0_native_mint;
-use solana_program::{account_info::Account, pubkey::Pubkey, system_instruction};
+use solana_program::{ pubkey::Pubkey, system_instruction};
 use solana_client::rpc_client::RpcClient;
 use solana_sdk::{ commitment_config::CommitmentConfig, instruction::Instruction, signature::{Keypair, Signer}, transaction::Transaction};
 use clap::{App, load_yaml};
@@ -54,7 +54,7 @@ fn main() {
         
         let ata = match rpc_client.get_account(&wsol_ata) {
             Ok(ata) => ata,
-            Err(err) => wallet_info,
+            Err(_err) => wallet_info,
         };
         
 
