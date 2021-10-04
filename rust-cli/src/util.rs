@@ -196,10 +196,3 @@ impl Pack for Lottery {
 
     }
 }
-
-
-
-
-
-
-
