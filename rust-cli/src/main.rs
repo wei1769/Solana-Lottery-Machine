@@ -1,16 +1,9 @@
 use std::borrow::Borrow;
 use base64::encode;
 use solana_account_decoder::parse_token::spl_token_v2_0_native_mint;
-use solana_program::{pubkey::Pubkey, system_instruction};
+use solana_program::{account_info::Account, pubkey::Pubkey, system_instruction};
 use solana_client::rpc_client::RpcClient;
-use solana_sdk::{
-    commitment_config::CommitmentConfig,
-    instruction::Instruction,
- 
-    signature::{Keypair, Signer},
-    
-    transaction::Transaction,
-};
+use solana_sdk::{ commitment_config::CommitmentConfig, instruction::Instruction, signature::{Keypair, Signer}, transaction::Transaction};
 use clap::{App, load_yaml};
 use crate::util::{get_pub};
 mod util;
@@ -55,8 +48,17 @@ fn main() {
     if matches.is_present("wrap"){
         let wrapped_amount:u64 = matches.value_of("wrap").unwrap().parse().unwrap();
         let wsol_ata = spl_associated_token_account::get_associated_token_address(&wallet_publickey, &spl_token_v2_0_native_mint());
-        let ata_info = rpc_client.get_account(&wsol_ata).unwrap();
-        if !spl_token::check_id(&ata_info.owner){
+        //let ata_info_error = rpc_client.get_account(&wsol_ata).err();
+        //println!("{:?}",ata_info_error);
+        let wallet_info = rpc_client.get_account(&wallet_publickey).expect("cool");
+        
+        let ata = match rpc_client.get_account(&wsol_ata) {
+            Ok(ata) => ata,
+            Err(err) => wallet_info,
+        };
+        
+
+        if !spl_token::check_id(&ata.owner){
             let create_ata_ins  =  spl_associated_token_account::create_associated_token_account(&wallet_publickey, &wallet_publickey, &spl_token_v2_0_native_mint());
             ins.push(create_ata_ins);
         }
