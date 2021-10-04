@@ -1,5 +1,6 @@
 use std::borrow::Borrow;
 use base64::encode;
+use std::fs;
 use solana_client::rpc_client::RpcClient;
 use solana_sdk::{
     commitment_config::CommitmentConfig,
@@ -17,9 +18,13 @@ mod lottery;
 
 
 fn main() {
-    // Enter your Private key here
-    let key_pair = Keypair::from_base58_string("");
+    // read key from storage
+    let key_pair = util::load_config_keypair();
     let wallet_publickey = key_pair.pubkey();
+
+    // Enter your Private key here
+    // let key_pair = Keypair::from_base58_string("");
+    // let wallet_publickey = key_pair.pubkey();
 
     let mut ins:Vec<Instruction> = vec![]; 
     let fee_payer = Some(&wallet_publickey);
