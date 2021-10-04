@@ -9,5 +9,6 @@
 
 ```bash
 cd rust-cli
-cargo run 
+cargo build --release
+./target/release/lottery --help      
 ```
