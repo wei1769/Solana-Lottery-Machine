@@ -1,0 +1,68 @@
+name: lottery-cli
+version: "0.1"
+author: Wei <wei.sol@soltricks.io>
+about: TBD
+args:
+  - private:
+      short: p
+      long: private_key
+      value_name: PRIVATE
+      takes_value: true
+      about: private key encode in base58 (optional)
+subcommands:
+  - init:
+      about: initialize a lottery pool
+      version: "0.1"
+      args:
+        - max_amount:
+            short: m
+            about: set the max amount of the lottery
+            takes_value: true
+            required: true
+        - slot_last:
+            short: s
+            about: set how many slot the lottery last
+            takes_value: true
+            required: true
+        - mint:
+            about: set the token mint for the lottery, Wsol in defult
+            takes_value: true
+  - buy:
+      about: buy a ticket of a lottery
+      version: "0.1"
+      args:
+        - lottery_id:
+            short: i
+            about: lottery id to buy
+            required: true
+            takes_value: true
+        - amount:
+            short: a
+            about: how much token you want to use
+            required: true
+            takes_value: true
+  - draw:
+      version: "0.1"
+      about: make a draw for a given lottery id
+      args:
+        - lottery_id:
+            short: i
+            about: lottery id to draw
+            required: true
+            takes_value: true
+  - withdraw:
+      about: withdraw the prize to the winner
+      args:
+        - lottery_id:
+            short: i
+            about: lottery id to withdraw
+            required: true
+            takes_value: true
+  - find:
+      about: find all tickets of a lottery
+      args:
+        - lottery_id:
+            short: i
+            about: lottery id to find
+            required: true
+            takes_value: true
