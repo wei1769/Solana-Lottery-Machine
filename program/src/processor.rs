@@ -285,7 +285,9 @@ impl Processor {
         msg!("unpack lottery");
         let mut lottery_info = Lottery::unpack(&lottery_id.data.borrow())?;
         let clock = clock::Clock::from_account_info(clock_account)?;
-        let slot_hash = slot_hashes::SlotHashes::from_account_info(slot_hash_account)?[1].1;
+
+        
+    
         let mut random_data:Vec<u8>  =vec![];
         random_data.extend_from_slice(&clock.slot.to_le_bytes());
         random_data.extend_from_slice(&clock.unix_timestamp.to_le_bytes());
@@ -293,14 +295,14 @@ impl Processor {
         random_data.extend_from_slice(&clock.epoch_start_timestamp.to_le_bytes());
         random_data.extend_from_slice(&lottery_info.current_amount.to_le_bytes());
         
-        random_data.extend_from_slice(&slot_hash.to_bytes());
-
+        random_data.extend_from_slice(&slot_hash_account.data.borrow());
+        msg!("hashing number");
         let random_number_hash: [u8;8] = hash::hash(&random_data).to_bytes()[0..8].try_into().unwrap();
         let mut random_number = u64::from_le_bytes(random_number_hash) % lottery_info.current_amount;
         if random_number == 0{
             random_number = lottery_info.current_amount;
         }
-        check_program_account(lottery_id.key)?;
+        check_program_account(lottery_id.owner)?;
         if !authority.is_signer && lottery_info.authority != authority.key.clone() {
             msg!("Not authority");
             return Err(ProgramError::MissingRequiredSignature);
@@ -309,8 +311,9 @@ impl Processor {
             || lottery_info.ended_slot > clock.slot)
             && lottery_info.account_type == 1
         {
-            lottery_info.lottery_number = 1;
+            lottery_info.lottery_number = random_number;
             lottery_info.account_type = 3;
+            msg!(&*format!("winner number: {:?}", random_number));
             Lottery::pack(lottery_info, &mut lottery_id.data.borrow_mut())?;
         } else {
             msg!("lottery not ended");

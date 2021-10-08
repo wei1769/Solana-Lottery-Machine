@@ -208,6 +208,7 @@ pub fn draw(lottery_id:&Pubkey,authority:&Pubkey)-> Vec<Instruction>{
         false,
         false,
     ));
+    keys.push(getkey(solana_program::sysvar::slot_hashes::id(),false,false));
     data.push(2);
     let draw_ins = Instruction {
         program_id: lottery_program_id,
