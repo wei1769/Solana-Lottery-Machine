@@ -1,11 +1,11 @@
-use std::convert::TryInto;
+use std::{ convert::TryInto};
 
 use crate::{
     check_fee_account, check_program_account,
     instruction::LotteryMachineInstructions,
     state::{Lottery, Ticket},
 };
-use solana_program::clock;
+use solana_program::{clock, };
 use solana_program::rent::Rent;
 use solana_program::{
     account_info::{next_account_info, AccountInfo},
@@ -17,6 +17,7 @@ use solana_program::{
     pubkey::Pubkey,
     system_instruction::{self},
     sysvar::Sysvar,
+    sysvar::slot_hashes,hash
 };
 use spl_associated_token_account::{create_associated_token_account, get_associated_token_address};
 use spl_token::instruction as TokenIns;
@@ -51,7 +52,7 @@ impl Processor {
             }
         }
     }
-
+    
     fn process_init_lottery(
         accounts: &[AccountInfo],
         max_amount: u64,
@@ -280,9 +281,25 @@ impl Processor {
         let lottery_id = next_account_info(account_info_iter)?;
         let authority = next_account_info(account_info_iter)?;
         let clock_account = next_account_info(account_info_iter)?;
+        let slot_hash_account = next_account_info(account_info_iter)?;
         msg!("unpack lottery");
         let mut lottery_info = Lottery::unpack(&lottery_id.data.borrow())?;
         let clock = clock::Clock::from_account_info(clock_account)?;
+        let slot_hash = slot_hashes::SlotHashes::from_account_info(slot_hash_account)?[1].1;
+        let mut random_data:Vec<u8>  =vec![];
+        random_data.extend_from_slice(&clock.slot.to_le_bytes());
+        random_data.extend_from_slice(&clock.unix_timestamp.to_le_bytes());
+        random_data.extend_from_slice(&clock.epoch.to_le_bytes());
+        random_data.extend_from_slice(&clock.epoch_start_timestamp.to_le_bytes());
+        random_data.extend_from_slice(&lottery_info.current_amount.to_le_bytes());
+        
+        random_data.extend_from_slice(&slot_hash.to_bytes());
+
+        let random_number_hash: [u8;8] = hash::hash(&random_data).to_bytes()[0..8].try_into().unwrap();
+        let mut random_number = u64::from_le_bytes(random_number_hash) % lottery_info.current_amount;
+        if random_number == 0{
+            random_number = lottery_info.current_amount;
+        }
         check_program_account(lottery_id.key)?;
         if !authority.is_signer && lottery_info.authority != authority.key.clone() {
             msg!("Not authority");
