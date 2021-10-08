@@ -285,8 +285,11 @@ impl Processor {
         msg!("unpack lottery");
         let mut lottery_info = Lottery::unpack(&lottery_id.data.borrow())?;
         let clock = clock::Clock::from_account_info(clock_account)?;
+        if lottery_info.account_type != 1{
+            msg!("Wrong account type");
+            return Err(ProgramError::InvalidArgument);
+        }
 
-        
     
         let mut random_data:Vec<u8>  =vec![];
         random_data.extend_from_slice(&clock.slot.to_le_bytes());
@@ -296,6 +299,8 @@ impl Processor {
         random_data.extend_from_slice(&lottery_info.current_amount.to_le_bytes());
         
         random_data.extend_from_slice(&slot_hash_account.data.borrow());
+        
+        msg!(&*format!("hashdata: {:?}", hash::hash(&random_data)));
         msg!("hashing number");
         let random_number_hash: [u8;8] = hash::hash(&random_data).to_bytes()[0..8].try_into().unwrap();
         let mut random_number = u64::from_le_bytes(random_number_hash) % lottery_info.current_amount;
@@ -317,6 +322,7 @@ impl Processor {
             Lottery::pack(lottery_info, &mut lottery_id.data.borrow_mut())?;
         } else {
             msg!("lottery not ended");
+            return Err(ProgramError::InvalidArgument);
         }
 
         Ok(())
@@ -365,6 +371,7 @@ impl Processor {
                     lottery_authority.clone(),
                     lottery_pda.clone(),
                     winner_ata.clone(),
+                    winner_account.clone(),
                     system_program_account.clone(),
                     rent.clone(),
                     token_program.clone(),
