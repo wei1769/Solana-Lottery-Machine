@@ -3,17 +3,23 @@ version: "0.1"
 author: Wei <wei.sol@soltricks.io>
 about: TBD
 args:
-  - private:
-      short: p
-      long: private_key
-      value_name: PRIVATE
-      takes_value: true
-      about: private key encode in base58 (optional)
+    - private:
+        short: p
+        long: private_key
+        value_name: PRIVATE
+        takes_value: true
+        about: private key encode in base58 (optional)
+    - wrap:
+        short: w
+        takes_value: true
+        value_name: LAMPORT
+        about: amounts of lamport to wrap 
+
 subcommands:
-  - init:
-      about: initialize a lottery pool
-      version: "0.1"
-      args:
+    - init:
+        about: initialize a lottery pool
+        version: "0.1"
+        args:
         - max_amount:
             short: m
             about: set the max amount of the lottery
@@ -27,10 +33,10 @@ subcommands:
         - mint:
             about: set the token mint for the lottery, Wsol in defult
             takes_value: true
-  - buy:
-      about: buy a ticket of a lottery
-      version: "0.1"
-      args:
+    - buy:
+        about: buy a ticket of a lottery
+        version: "0.1"
+        args:
         - lottery_id:
             short: i
             about: lottery id to buy
@@ -41,26 +47,26 @@ subcommands:
             about: how much token you want to use
             required: true
             takes_value: true
-  - draw:
-      version: "0.1"
-      about: make a draw for a given lottery id
-      args:
+    - draw:
+        version: "0.1"
+        about: make a draw for a given lottery id
+        args:
         - lottery_id:
             short: i
             about: lottery id to draw
             required: true
             takes_value: true
-  - withdraw:
-      about: withdraw the prize to the winner
-      args:
+    - withdraw:
+        about: withdraw the prize to the winner
+        args:
         - lottery_id:
             short: i
             about: lottery id to withdraw
             required: true
             takes_value: true
-  - find:
-      about: find all tickets of a lottery
-      args:
+    - find:
+        about: find all tickets of a lottery
+        args:
         - lottery_id:
             short: i
             about: lottery id to find
