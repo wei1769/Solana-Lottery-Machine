@@ -1,12 +1,10 @@
-import { publicKey, struct, u64, u8 } from "@project-serum/borsh";
+import { struct, u64, u8 } from "@project-serum/borsh";
 import {
   Account,
   AccountMeta,
   Connection,
-  Keypair,
   PublicKey,
   sendAndConfirmTransaction,
-  SystemProgram,
   Transaction,
   TransactionInstruction,
 } from "@solana/web3.js";
@@ -20,9 +18,16 @@ const manager_private_key = JSON.parse(fs.readFileSync(keyPairPath, "utf-8"));
 
 const managerAccount = new Account(manager_private_key);
 
-const LOTTERY_PUBLIC_KEY = new PublicKey("42hrGQzkPQMXTmtpsE9hb9D7dTffzYXgqC4DHUHubJSv");
-const FEE_RECEIVER_PUBLIC_KEY = new PublicKey("2wnEcArzCpX1QRdtpHRXxZ7k9b1UeK16mPt26LPWFZ6V");
-const MINT_PUBLIC_KEY = new PublicKey("So11111111111111111111111111111111111111112"); // WSOL
+// lottery program ID
+const LOTTERY_PUBLIC_KEY = new PublicKey(
+  "42hrGQzkPQMXTmtpsE9hb9D7dTffzYXgqC4DHUHubJSv"
+);
+// the account to receive the lottery commission fee
+const FEE_RECEIVER_PUBLIC_KEY = new PublicKey(
+  "2wnEcArzCpX1QRdtpHRXxZ7k9b1UeK16mPt26LPWFZ6V"
+);
+// the base token used for buying lottery
+const WSOL_PUBLIC_KEY_RAW = "So11111111111111111111111111111111111111112";
 
 // devnet connection
 const connection = new Connection(
@@ -30,41 +35,24 @@ const connection = new Connection(
   "singleGossip"
 );
 
-// referenced from rust-cli/src/util.rs Lottery struct
-const LOTTERY_LAYOUT = struct([
-  u8("account_type"),
-  publicKey("authority"),
-  publicKey("token_reciever"),
-  publicKey("fee_reciever"),
-  u64("max_amount"),
-  u64("ended_slot"),
-  u64("lottery_number"),
-  u64("current_amount"),
-]);
-
-// referenced from rust-cli/src/util.rs Ticket struct
-const TICKET_LAYOUT = struct([
-  u8("account_type"),
-  publicKey("lottery_id"),
-  publicKey("buyer"),
-  u64("start_number"),
-  u64("end_number"),
-]);
-
-export async function init_lottery(_slot: number, _max_amount: number) {
+export async function init_lottery(
+  _mintPublicKeyRaw: string,
+  _slot: number,
+  _max_amount: number
+) {
   const lotteryProgramId = new PublicKey(LOTTERY_PUBLIC_KEY);
+  const _mintPublicKey = new PublicKey(_mintPublicKeyRaw);
   // console.log("lotteryProgramId", lotteryProgramId);
 
-  const newAccount = new Account();
-  let newAccountPublicKey = newAccount.publicKey;
   let feeRecieverPublicKey = new PublicKey(FEE_RECEIVER_PUBLIC_KEY);
   // console.log("lotteryPublicKey", lotteryPublicKey);
   var recent_blockhash = (await connection.getRecentBlockhash()).blockhash;
-  
+
+  const newAccount = new Account();
+  let newAccountPublicKey = newAccount.publicKey;
   const transaction = new Transaction();
+
   transaction.recentBlockhash = recent_blockhash;
-  // create lottery account
-  
 
   // create lottery PDA
   const lottery_pda = await PublicKey.createProgramAddress(
@@ -75,13 +63,12 @@ export async function init_lottery(_slot: number, _max_amount: number) {
   // find associated token account address
   let lottery_ata = await utils.findAssociatedTokenAddress(
     lottery_pda,
-    MINT_PUBLIC_KEY
+    _mintPublicKey
   );
   let fee_ata = await utils.findAssociatedTokenAddress(
     feeRecieverPublicKey,
-    MINT_PUBLIC_KEY
+    _mintPublicKey
   );
-  
 
   // prepare keys
   /// 0.`[writable,signer]` lottery id
@@ -125,7 +112,7 @@ export async function init_lottery(_slot: number, _max_amount: number) {
       isWritable: false,
     },
     {
-      pubkey: MINT_PUBLIC_KEY,
+      pubkey: _mintPublicKey,
       isSigner: false,
       isWritable: false,
     },
@@ -176,11 +163,12 @@ export async function init_lottery(_slot: number, _max_amount: number) {
       data,
     })
   );
-  
 
   // return { transaction, newLotteryAccount };
 
   transaction.feePayer = managerAccount.publicKey;
+
+  // put the data into https://explorer.solana.com/tx/inspector
   console.log(transaction.serializeMessage().toString("base64"));
 
   const tx = await sendAndConfirmTransaction(
@@ -196,149 +184,98 @@ export async function init_lottery(_slot: number, _max_amount: number) {
   console.log(`Tx: https://explorer.solana.com/tx/${tx}?cluster=devnet`);
 }
 
-class PoolInfo {
-  account_type: number;
-  manager: PublicKey;
-  fee_reciever: PublicKey;
-  total_amount: number;
-  price: number;
-  fee: number;
-  current_number: number;
+// pub fn buy(
+//     lottery_id:&Pubkey,
+//     amount:u64,
+//     authority: &Pubkey,
+//     rpc_client: &RpcClient,
 
-  constructor(
-    account_type: number,
-    manager: PublicKey,
-    fee_reciever: PublicKey,
-    total_amount: number,
-    price: number,
-    fee: number,
-    current_number: number
-  ) {
-    this.account_type = account_type;
-    this.manager = manager;
-    this.fee_reciever = fee_reciever;
-    this.total_amount = total_amount;
-    this.price = price;
-    this.fee = fee;
-    this.current_number = current_number;
-  }
-}
+// )
 
-function parsePoolInfoData(data: any) {
-  let {
-    account_type,
-    manager,
-    fee_reciever,
-    total_amount,
-    price,
-    fee,
-    current_number,
-  } = LOTTERY_LAYOUT.decode(data);
-  return new PoolInfo(
-    account_type,
-    new PublicKey(manager),
-    new PublicKey(fee_reciever),
-    total_amount,
-    price,
-    fee,
-    current_number
+export async function buy(_lotteryPoolId: string, _amount: number) {
+  // init
+  const newAccount = new Account();
+  let newAccountPublicKey = newAccount.publicKey;
+  const transaction = new Transaction();
+
+  const lotteryPoolPublicKey = new PublicKey(_lotteryPoolId);
+
+  // get token receiver account
+  const lotteryAccountInfo = await connection.getAccountInfo(
+    lotteryPoolPublicKey
   );
+  if (!lotteryAccountInfo)
+    throw new Error("Lottery pool id not found! " + lotteryPoolPublicKey);
+
+  const lotteryPoolData = utils.parseLotteryPoolData(lotteryAccountInfo.data);
+  console.log("lottery pool info", lotteryPoolData);
+
+  // referenced from program/src/instruction.rs
+  /// 0.`[writable]` lottery id
+  /// 1.`[writable,signer]` ticket id
+  /// 2.`[writable,signer]` buyer authority
+  /// 3.`[writable]` token receiver account
+  /// 4.`[writable]` authority token account
+  /// 5.`[]` token program
+  /// 6.`[]` Sysvar: Clock
+  /// 7.`[]` system program
+  /// 8.`[]` Sysvar Rent
+  const keys: AccountMeta[] = [
+    {
+      pubkey: lotteryPoolPublicKey,
+      isSigner: false,
+      isWritable: true,
+    },
+    {
+      pubkey: newAccountPublicKey, // ticket id
+      isSigner: true,
+      isWritable: true,
+    },
+    { pubkey: managerAccount.publicKey, isSigner: true, isWritable: true },
+    {
+      pubkey: lotteryPoolData.token_reciever,
+      isSigner: false,
+      isWritable: true,
+    },
+    {
+      pubkey: feeRecieverPublicKey,
+      isSigner: false,
+      isWritable: false,
+    },
+    {
+      pubkey: new PublicKey("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"),
+      isSigner: false,
+      isWritable: false,
+    },
+    {
+      pubkey: new PublicKey("SysvarC1ock11111111111111111111111111111111"),
+      isSigner: false,
+      isWritable: false,
+    },
+    {
+      pubkey: new PublicKey("11111111111111111111111111111111"),
+      isSigner: false,
+      isWritable: false,
+    },
+
+    {
+      pubkey: new PublicKey("SysvarRent111111111111111111111111111111111"),
+      isSigner: false,
+      isWritable: false,
+    },
+  ];
 }
 
-// let { transaction, ticketKeyPair } = buy();
-// export async function buy(pool_id: string, buyer: Account) {
-//   const lotteryProgramId = new PublicKey(LOTTERY_PUBLIC_KEY);
+export async function get_lottery_info(_lotteryPoolId: string) {}
 
-//   // create new public key for ticket
-//   const newTicketAccount = new Account();
-//   let ticketPublicKey = newTicketAccount.publicKey;
+// -------- function execution ---------
 
-//   // add create account instruction to transaction
-//   const transaction = new Transaction();
-//   // transaction.add(
-//   //   SystemProgram.createAccount({
-//   //     fromPubkey: buyer.publicKey,
-//   //     newAccountPubkey: ticketPublicKey,
-//   //     lamports: await connection.getMinimumBalanceForRentExemption(
-//   //       TICKET_LAYOUT.span
-//   //     ),
-//   //     space: TICKET_LAYOUT.span,
-//   //     programId: lotteryProgramId,
-//   //   })
-//   // );
+// init lottery which users can buy tickets. Different base tokens need to init different pools.
+const max_amount = 100; // the total amount of lottery tickets
+const slot = 100000000; // how long this lottery lasts (slot is blocknumber is Solana)
+const mint_public_key = WSOL_PUBLIC_KEY_RAW; // user can use WSOL to buy tickets
+init_lottery(mint_public_key, slot, max_amount);
 
-//   // get pool info
-//   // let poolInfo: AccountInfo<Buffer> | null = await connection.getAccountInfo(
-//   //   new PublicKey(pool_id)
-//   // );
-//   // if (!poolInfo) throw new Error("Pool id not found! " + pool_id);
-//   // else console.log("poolInfo", parsePoolInfoData(poolInfo.data));
-
-//   // add buy instruction to transaction
-//   const keys: AccountMeta[] = [
-//     { pubkey: new PublicKey(pool_id), isSigner: false, isWritable: true },
-//     {
-//       pubkey: parsePoolInfoData(poolInfo.data).manager,
-//       isSigner: false,
-//       isWritable: true,
-//     },
-//     {
-//       pubkey: new PublicKey(FEE_RECEIVER_PUBLIC_KEY),
-//       isSigner: false,
-//       isWritable: true,
-//     },
-//     {
-//       pubkey: ticketPublicKey,
-//       isSigner: true,
-//       isWritable: true,
-//     },
-//     {
-//       pubkey: buyer.publicKey,
-//       isSigner: true,
-//       isWritable: true,
-//     },
-//     {
-//       pubkey: new PublicKey("11111111111111111111111111111111"),
-//       isSigner: false,
-//       isWritable: false,
-//     },
-//   ];
-
-//   const dataLayout = struct([u8("instruction")]);
-//   const data = Buffer.alloc(dataLayout.span);
-//   dataLayout.encode(
-//     {
-//       instruction: 1,
-//     },
-//     data
-//   );
-//   transaction.add(
-//     new TransactionInstruction({
-//       keys,
-//       programId: lotteryProgramId,
-//       data,
-//     })
-//   );
-
-//   // return { transaction, newTicketAccount };
-//   const tx = await sendAndConfirmTransaction(
-//     connection,
-//     transaction,
-//     [buyer, newTicketAccount],
-//     {
-//       skipPreflight: false,
-//       commitment: "recent",
-//       preflightCommitment: "recent",
-//     }
-//   );
-//   console.log(`Tx: https://explorer.solana.com/tx/${tx}?cluster=devnet`);
-// }
-
-// function execution
-const max_amount = 100;
-const slot = 100000000;
-init_lottery(slot, max_amount);
-
-// let pool_id = POOL_ID;
-// let buyer = managerAccount;
-// buy(pool_id, buyer);
+// buy 1 ticket with 1 WSOL
+const lottery_lotteryPoolId = "HimNHAmWUMK5ez5BfR5SG8725aWnWf9o9p6SWzwnkEU7"; // obtain the lottery pool ID from the init function above
+buy(lottery_lotteryPoolId, 1);
