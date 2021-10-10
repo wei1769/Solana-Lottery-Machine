@@ -266,7 +266,7 @@ export async function buy(_lotteryPoolId: string, _amount: number) {
   const data = Buffer.alloc(dataLayout.span);
   dataLayout.encode(
     {
-      instruction: 1, // for the instruction index, see instruction.rs
+      instruction: new BN(1), // for the instruction index, see instruction.rs
       amount: new BN(_amount),
     },
     data
@@ -299,6 +299,78 @@ export async function buy(_lotteryPoolId: string, _amount: number) {
   console.log(`Tx: https://explorer.solana.com/tx/${tx}?cluster=devnet`);
 }
 
+export async function draw(_lotteryPoolId: string) {
+  // init
+  const newAccount = new Account();
+  let newAccountPublicKey = newAccount.publicKey;
+  const transaction = new Transaction();
+  const recent_blockhash = (await connection.getRecentBlockhash()).blockhash;
+  transaction.recentBlockhash = recent_blockhash;
+
+  const lotteryProgramId = new PublicKey(LOTTERY_PUBLIC_KEY);
+  const lotteryPoolPublicKey = new PublicKey(_lotteryPoolId);
+
+  /// 0.`[writable]` lottery id
+  /// 1.`[signer]` lottery authority
+  /// 2.`[]` Sysvar: Clock
+  /// 3.`[]` Sysvar: Slot Hashes
+  const keys: AccountMeta[] = [
+    {
+      pubkey: lotteryPoolPublicKey,
+      isSigner: false,
+      isWritable: true,
+    },
+    { pubkey: managerAccount.publicKey, isSigner: true, isWritable: false },
+    {
+      pubkey: new PublicKey("SysvarC1ock11111111111111111111111111111111"),
+      isSigner: false,
+      isWritable: false,
+    },
+    {
+      pubkey: new PublicKey("SysvarS1otHashes111111111111111111111111111"),
+      isSigner: false,
+      isWritable: false,
+    },
+  ];
+
+  // prepare data
+  // referenced from program/src/instruction.rs
+  const dataLayout = struct([u8("instruction")]);
+  const data = Buffer.alloc(dataLayout.span);
+  dataLayout.encode(
+    {
+      instruction: new BN(2), // for the instruction index, see instruction.rs
+    },
+    data
+  );
+
+  // add init pool instruction to transaction
+  transaction.add(
+    new TransactionInstruction({
+      keys,
+      programId: lotteryProgramId,
+      data,
+    })
+  );
+
+  transaction.feePayer = managerAccount.publicKey;
+
+  // put the data into https://explorer.solana.com/tx/inspector
+  console.log(transaction.serializeMessage().toString("base64"));
+
+  const tx = await sendAndConfirmTransaction(
+    connection,
+    transaction,
+    [managerAccount],
+    {
+      skipPreflight: false,
+      commitment: "recent",
+      preflightCommitment: "recent",
+    }
+  );
+  console.log(`Tx: https://explorer.solana.com/tx/${tx}?cluster=devnet`);
+}
+
 export async function get_lottery_info(_lotteryPoolId: string) {}
 
 // -------- function execution ---------
@@ -312,3 +384,6 @@ const mint_public_key = WSOL_PUBLIC_KEY_RAW; // user can use WSOL to buy tickets
 // buy 1 ticket with 1 WSOL
 const lottery_lotteryPoolId = "HimNHAmWUMK5ez5BfR5SG8725aWnWf9o9p6SWzwnkEU7"; // obtain the lottery pool ID from the init function above
 buy(lottery_lotteryPoolId, 1);
+
+// draw from the pool
+draw(lottery_lotteryPoolId);
