@@ -371,6 +371,121 @@ export async function draw(_lotteryPoolId: string) {
   console.log(`Tx: https://explorer.solana.com/tx/${tx}?cluster=devnet`);
 }
 
+export async function withdraw(_lotteryPoolId: string) {
+  // init
+  const newAccount = new Account();
+  let newAccountPublicKey = newAccount.publicKey;
+  const transaction = new Transaction();
+  const recent_blockhash = (await connection.getRecentBlockhash()).blockhash;
+  transaction.recentBlockhash = recent_blockhash;
+
+  const lotteryProgramId = new PublicKey(LOTTERY_PUBLIC_KEY);
+  const lotteryPoolPublicKey = new PublicKey(_lotteryPoolId);
+
+  // get token receiver account
+  const lotteryAccountInfo = await connection.getAccountInfo(
+    lotteryPoolPublicKey
+  );
+  if (!lotteryAccountInfo)
+    throw new Error("Lottery pool id not found! " + lotteryPoolPublicKey);
+
+  const lotteryPoolData = utils.parseLotteryPoolData(lotteryAccountInfo.data);
+  console.log("lottery pool info", lotteryPoolData);
+
+  /// 0.`[writable]` lottery id
+  /// 1.`[writable,signer]` lottery authority
+  /// 2.`[writable]` token reciever (ATA owned by lottery PDA, Derived from mint,lottery PDA)
+  /// 3.`[writable]` fee reciever (ATA owned by fee authority)
+  /// 4.`[writable]` winner token account
+  /// 5.`[]` winning ticket id
+  /// 6.`[]` lottery PDA
+  /// 7.`[]` token mint
+  /// 8.`[]` token program
+  /// 9.`[]` system program
+  /// 10.`[]` Sysvar Rent
+  /// 11.`[]` Associated Token Program
+  /// 12.`[]` Winner account
+  const keys: AccountMeta[] = [
+    {
+      pubkey: lotteryPoolPublicKey,
+      isSigner: false,
+      isWritable: true,
+    },
+    { pubkey: managerAccount.publicKey, isSigner: true, isWritable: true },
+    {
+      pubkey: lotteryPoolData.token_reciever,
+      isSigner: false,
+      isWritable: true,
+    },
+    {
+      pubkey: lotteryPoolData.fee_reciever,
+      isSigner: false,
+      isWritable: true,
+    },
+    {
+      pubkey: lotteryPoolData.token_mint,
+      isSigner: false,
+      isWritable: true,
+    },
+    {
+      pubkey: new PublicKey("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"),
+      isSigner: false,
+      isWritable: false,
+    },
+    {
+      pubkey: new PublicKey("11111111111111111111111111111111"),
+      isSigner: false,
+      isWritable: false,
+    },
+    {
+      pubkey: new PublicKey("SysvarRent111111111111111111111111111111111"),
+      isSigner: false,
+      isWritable: false,
+    },
+    {
+      pubkey: new PublicKey("ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL"),
+      isSigner: false,
+      isWritable: false,
+    },
+  ];
+
+  // prepare data
+  // referenced from program/src/instruction.rs
+  const dataLayout = struct([u8("instruction")]);
+  const data = Buffer.alloc(dataLayout.span);
+  dataLayout.encode(
+    {
+      instruction: new BN(3), // for the instruction index, see instruction.rs
+    },
+    data
+  );
+
+  // add init pool instruction to transaction
+  transaction.add(
+    new TransactionInstruction({
+      keys,
+      programId: lotteryProgramId,
+      data,
+    })
+  );
+
+  transaction.feePayer = managerAccount.publicKey;
+
+  // put the data into https://explorer.solana.com/tx/inspector
+  console.log(transaction.serializeMessage().toString("base64"));
+
+  const tx = await sendAndConfirmTransaction(
+    connection,
+    transaction,
+    [managerAccount],
+    {
+      skipPreflight: false,
+      commitment: "recent",
+      preflightCommitment: "recent",
+    }
+  );
+  console.log(`Tx: https://explorer.solana.com/tx/${tx}?cluster=devnet`);
+}
 export async function get_lottery_info(_lotteryPoolId: string) {}
 
 // -------- function execution ---------
@@ -387,3 +502,6 @@ buy(lottery_lotteryPoolId, 1);
 
 // draw from the pool
 draw(lottery_lotteryPoolId);
+
+// withdraw from the pool
+withdraw(lottery_lotteryPoolId);
