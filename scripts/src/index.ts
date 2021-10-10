@@ -197,7 +197,10 @@ export async function buy(_lotteryPoolId: string, _amount: number) {
   const newAccount = new Account();
   let newAccountPublicKey = newAccount.publicKey;
   const transaction = new Transaction();
+  const recent_blockhash = (await connection.getRecentBlockhash()).blockhash;
+  transaction.recentBlockhash = recent_blockhash;
 
+  const lotteryProgramId = new PublicKey(LOTTERY_PUBLIC_KEY);
   const lotteryPoolPublicKey = new PublicKey(_lotteryPoolId);
 
   // get token receiver account
@@ -214,8 +217,8 @@ export async function buy(_lotteryPoolId: string, _amount: number) {
   /// 0.`[writable]` lottery id
   /// 1.`[writable,signer]` ticket id
   /// 2.`[writable,signer]` buyer authority
-  /// 3.`[writable]` token receiver account
-  /// 4.`[writable]` authority token account
+  /// 3.`[writable]` token reciever (ATA owned by lottery PDA, Derived from mint,lottery PDA)
+  /// 4.`[writable]` buyer token account
   /// 5.`[]` token program
   /// 6.`[]` Sysvar: Clock
   /// 7.`[]` system program
@@ -238,9 +241,9 @@ export async function buy(_lotteryPoolId: string, _amount: number) {
       isWritable: true,
     },
     {
-      pubkey: feeRecieverPublicKey,
+      pubkey: lotteryPoolData.token_mint,
       isSigner: false,
-      isWritable: false,
+      isWritable: true,
     },
     {
       pubkey: new PublicKey("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"),
@@ -264,6 +267,44 @@ export async function buy(_lotteryPoolId: string, _amount: number) {
       isWritable: false,
     },
   ];
+
+  // prepare data
+  // referenced from program/src/instruction.rs
+  const dataLayout = struct([u8("instruction"), u64("amount")]);
+  const data = Buffer.alloc(dataLayout.span);
+  dataLayout.encode(
+    {
+      instruction: 1, // for the instruction index, see instruction.rs
+      amount: new BN(_amount),
+    },
+    data
+  );
+
+  // add init pool instruction to transaction
+  transaction.add(
+    new TransactionInstruction({
+      keys,
+      programId: lotteryProgramId,
+      data,
+    })
+  );
+
+  transaction.feePayer = managerAccount.publicKey;
+
+  // put the data into https://explorer.solana.com/tx/inspector
+  console.log(transaction.serializeMessage().toString("base64"));
+
+  const tx = await sendAndConfirmTransaction(
+    connection,
+    transaction,
+    [managerAccount, newAccount],
+    {
+      skipPreflight: false,
+      commitment: "recent",
+      preflightCommitment: "recent",
+    }
+  );
+  console.log(`Tx: https://explorer.solana.com/tx/${tx}?cluster=devnet`);
 }
 
 export async function get_lottery_info(_lotteryPoolId: string) {}
@@ -274,7 +315,7 @@ export async function get_lottery_info(_lotteryPoolId: string) {}
 const max_amount = 100; // the total amount of lottery tickets
 const slot = 100000000; // how long this lottery lasts (slot is blocknumber is Solana)
 const mint_public_key = WSOL_PUBLIC_KEY_RAW; // user can use WSOL to buy tickets
-init_lottery(mint_public_key, slot, max_amount);
+// init_lottery(mint_public_key, slot, max_amount); // we only need to init once
 
 // buy 1 ticket with 1 WSOL
 const lottery_lotteryPoolId = "HimNHAmWUMK5ez5BfR5SG8725aWnWf9o9p6SWzwnkEU7"; // obtain the lottery pool ID from the init function above

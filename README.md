@@ -12,6 +12,12 @@ cargo build --release
 ./target/release/lottery --help
 ```
 
+### Wrap SOL
+
+```bash
+./target/release/lottery -w <amount>
+```
+
 ### JS Script
 
 ```bash
