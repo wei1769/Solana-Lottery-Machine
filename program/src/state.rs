@@ -15,7 +15,7 @@ pub struct Lottery {
     pub lottery_number: u64,    //size:8
     pub current_amount: u64,    //size:8
     pub token_mint: Pubkey
-                                //Lottery account size should be 129 Bytes
+                                //Lottery account size should be 161 Bytes
 }
 pub struct Ticket {
     pub account_type: u8,   //2 is Ticket size:1
