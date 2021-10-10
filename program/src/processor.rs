@@ -169,6 +169,7 @@ impl Processor {
         lottery_info.token_reciever = lottery_ata.key.clone();
         lottery_info.fee_reciever = fee_ata.key.clone();
         lottery_info.current_amount = 0;
+        lottery_info.token_mint = token_mint.key.clone();
         Lottery::pack(lottery_info, &mut lottery_id.data.borrow_mut())?;
         msg!(&*format!("Pool initialized: {:?}", lottery_id.key));
 
