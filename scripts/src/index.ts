@@ -3,6 +3,7 @@ import {
   Account,
   AccountMeta,
   Connection,
+  Keypair,
   PublicKey,
   sendAndConfirmTransaction,
   SystemProgram,
@@ -19,9 +20,9 @@ const manager_private_key = JSON.parse(fs.readFileSync(keyPairPath, "utf-8"));
 
 const managerAccount = new Account(manager_private_key);
 
-const LOTTERY_PUBLIC_KEY = "42hrGQzkPQMXTmtpsE9hb9D7dTffzYXgqC4DHUHubJSv";
-const FEE_RECEIVER_PUBLIC_KEY = "2wnEcArzCpX1QRdtpHRXxZ7k9b1UeK16mPt26LPWFZ6V";
-const MINT_PUBLIC_KEY = "So11111111111111111111111111111111111111112"; // WSOL
+const LOTTERY_PUBLIC_KEY = new PublicKey("42hrGQzkPQMXTmtpsE9hb9D7dTffzYXgqC4DHUHubJSv");
+const FEE_RECEIVER_PUBLIC_KEY = new PublicKey("2wnEcArzCpX1QRdtpHRXxZ7k9b1UeK16mPt26LPWFZ6V");
+const MINT_PUBLIC_KEY = new PublicKey("So11111111111111111111111111111111111111112"); // WSOL
 
 // devnet connection
 const connection = new Connection(
@@ -58,37 +59,29 @@ export async function init_lottery(_slot: number, _max_amount: number) {
   let newAccountPublicKey = newAccount.publicKey;
   let feeRecieverPublicKey = new PublicKey(FEE_RECEIVER_PUBLIC_KEY);
   // console.log("lotteryPublicKey", lotteryPublicKey);
-
+  var recent_blockhash = (await connection.getRecentBlockhash()).blockhash;
+  
   const transaction = new Transaction();
-
+  transaction.recentBlockhash = recent_blockhash;
   // create lottery account
-  transaction.add(
-    SystemProgram.createAccount({
-      fromPubkey: managerAccount.publicKey,
-      newAccountPubkey: newAccountPublicKey,
-      lamports: await connection.getMinimumBalanceForRentExemption(
-        LOTTERY_LAYOUT.span
-      ),
-      space: LOTTERY_LAYOUT.span,
-      programId: lotteryProgramId,
-    })
-  );
+  
 
   // create lottery PDA
   const lottery_pda = await PublicKey.createProgramAddress(
-    [],
+    [newAccountPublicKey.toBuffer()],
     lotteryProgramId
   );
 
   // find associated token account address
   let lottery_ata = await utils.findAssociatedTokenAddress(
-    managerAccount.publicKey,
-    lotteryProgramId
+    lottery_pda,
+    MINT_PUBLIC_KEY
   );
   let fee_ata = await utils.findAssociatedTokenAddress(
-    managerAccount.publicKey,
-    feeRecieverPublicKey
+    feeRecieverPublicKey,
+    MINT_PUBLIC_KEY
   );
+  
 
   // prepare keys
   /// 0.`[writable,signer]` lottery id
@@ -97,8 +90,14 @@ export async function init_lottery(_slot: number, _max_amount: number) {
   /// 3.`[writable]` lottery PDA
   /// 4.`[writable]` lottery associated token account
   /// 5.`[writable]` fee associated token account
+  /// 6.`[]` Associated Token Program
+  /// 7.`[]` token mint
+  /// 8.`[]` token program
+  /// 9.`[]` system program
+  /// 10.`[]` Sysvar Clock
+  /// 11.`[]` Sysvar Rent
   const keys: AccountMeta[] = [
-    { pubkey: lotteryProgramId, isSigner: true, isWritable: true },
+    { pubkey: newAccountPublicKey, isSigner: true, isWritable: true },
     { pubkey: managerAccount.publicKey, isSigner: true, isWritable: true },
     {
       pubkey: feeRecieverPublicKey,
@@ -119,6 +118,36 @@ export async function init_lottery(_slot: number, _max_amount: number) {
       pubkey: fee_ata,
       isSigner: false,
       isWritable: true,
+    },
+    {
+      pubkey: new PublicKey("ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL"),
+      isSigner: false,
+      isWritable: false,
+    },
+    {
+      pubkey: MINT_PUBLIC_KEY,
+      isSigner: false,
+      isWritable: false,
+    },
+    {
+      pubkey: new PublicKey("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"),
+      isSigner: false,
+      isWritable: false,
+    },
+    {
+      pubkey: new PublicKey("11111111111111111111111111111111"),
+      isSigner: false,
+      isWritable: false,
+    },
+    {
+      pubkey: new PublicKey("SysvarC1ock11111111111111111111111111111111"),
+      isSigner: false,
+      isWritable: false,
+    },
+    {
+      pubkey: new PublicKey("SysvarRent111111111111111111111111111111111"),
+      isSigner: false,
+      isWritable: false,
     },
   ];
 
@@ -147,8 +176,12 @@ export async function init_lottery(_slot: number, _max_amount: number) {
       data,
     })
   );
+  
 
   // return { transaction, newLotteryAccount };
+
+  transaction.feePayer = managerAccount.publicKey;
+  console.log(transaction.serializeMessage().toString("base64"));
 
   const tx = await sendAndConfirmTransaction(
     connection,
