@@ -184,14 +184,6 @@ export async function init_lottery(
   console.log(`Tx: https://explorer.solana.com/tx/${tx}?cluster=devnet`);
 }
 
-// pub fn buy(
-//     lottery_id:&Pubkey,
-//     amount:u64,
-//     authority: &Pubkey,
-//     rpc_client: &RpcClient,
-
-// )
-
 export async function buy(_lotteryPoolId: string, _amount: number) {
   // init
   const newAccount = new Account();

@@ -12,7 +12,7 @@ cargo build --release
 ./target/release/lottery --help
 ```
 
-### Wrap SOL
+### Wrap SOL (remember to do this on Devnet)
 
 ```bash
 ./target/release/lottery -w <amount>
