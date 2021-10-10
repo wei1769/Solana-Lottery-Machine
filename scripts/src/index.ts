@@ -132,7 +132,7 @@ export async function init_lottery(_slot: number, _max_amount: number) {
   const data = Buffer.alloc(dataLayout.span);
   dataLayout.encode(
     {
-      instruction: 0,
+      instruction: 0, // for the instruction index, see instruction.rs
       max_amount: new BN(_max_amount),
       slot: new BN(_slot),
     },
