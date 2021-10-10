@@ -301,8 +301,6 @@ export async function buy(_lotteryPoolId: string, _amount: number) {
 
 export async function draw(_lotteryPoolId: string) {
   // init
-  const newAccount = new Account();
-  let newAccountPublicKey = newAccount.publicKey;
   const transaction = new Transaction();
   const recent_blockhash = (await connection.getRecentBlockhash()).blockhash;
   transaction.recentBlockhash = recent_blockhash;
@@ -373,8 +371,6 @@ export async function draw(_lotteryPoolId: string) {
 
 export async function withdraw(_lotteryPoolId: string) {
   // init
-  const newAccount = new Account();
-  let newAccountPublicKey = newAccount.publicKey;
   const transaction = new Transaction();
   const recent_blockhash = (await connection.getRecentBlockhash()).blockhash;
   transaction.recentBlockhash = recent_blockhash;
