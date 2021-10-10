@@ -14,7 +14,7 @@ pub struct Lottery {
     pub ended_slot: u64,        //size:8
     pub lottery_number: u64,    //size:8
     pub current_amount: u64,    //size:8
-
+    pub token_mint: Pubkey
                                 //Lottery account size should be 129 Bytes
 }
 pub struct Ticket {
@@ -86,7 +86,7 @@ impl IsInitialized for Lottery {
 }
 
 impl Pack for Lottery {
-    const LEN: usize = 129;
+    const LEN: usize = 161;
     fn unpack_from_slice(src: &[u8]) -> Result<Self, ProgramError> {
         let src = array_ref![src, 0, Lottery::LEN];
         let (
@@ -98,13 +98,15 @@ impl Pack for Lottery {
             _ended_slot,
             _lottery_number,
             _current_amount,
-        ) = array_refs![src, 1, 32, 32, 32, 8, 8, 8, 8];
+            _token_mint
+        ) = array_refs![src, 1, 32, 32, 32, 8, 8, 8, 8,32];
 
         let account_type = u8::from_le_bytes(*_account_type);
 
         let authority = Pubkey::new(_authority);
         let token_reciever = Pubkey::new(_token_reciever);
         let fee_reciever = Pubkey::new(_fee_reciever);
+        let token_mint = Pubkey::new(_token_mint);
         let max_amount = u64::from_le_bytes(*_max_amount);
         let ended_slot = u64::from_le_bytes(*_ended_slot);
         let lottery_number = u64::from_le_bytes(*_lottery_number);
@@ -118,6 +120,7 @@ impl Pack for Lottery {
             ended_slot,
             lottery_number,
             current_amount,
+            token_mint
         })
     }
     fn pack_into_slice(&self, dst: &mut [u8]) {
@@ -132,7 +135,8 @@ impl Pack for Lottery {
             _ended_slot_dst,
             _lottery_number_dst,
             _current_amount_dst,
-        ) = mut_array_refs![dst, 1, 32, 32, 32, 8, 8, 8, 8];
+            _token_mint_dst
+        ) = mut_array_refs![dst, 1, 32, 32, 32, 8, 8, 8, 8,32];
 
         let Lottery {
             account_type,
@@ -143,12 +147,13 @@ impl Pack for Lottery {
             ended_slot,
             lottery_number,
             current_amount,
+            token_mint,
         } = self;
         _account_type_dst[0] = *account_type as u8;
         _authority_dst.copy_from_slice(authority.as_ref());
         _token_reciever_dst.copy_from_slice(token_reciever.as_ref());
         _fee_reciever_dst.copy_from_slice(fee_reciever.as_ref());
-
+        _token_mint_dst.copy_from_slice(token_mint.as_ref());
         *_max_amount_dst = max_amount.to_le_bytes();
         *_ended_slot_dst = ended_slot.to_le_bytes();
         *_lottery_number_dst = lottery_number.to_le_bytes();

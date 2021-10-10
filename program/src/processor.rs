@@ -1,12 +1,11 @@
-use std::convert::TryInto;
+use std::{ convert::TryInto};
 
 use crate::{
     check_fee_account, check_program_account,
-    error::LotteryError,
     instruction::LotteryMachineInstructions,
     state::{Lottery, Ticket},
 };
-use solana_program::clock;
+use solana_program::{clock, };
 use solana_program::rent::Rent;
 use solana_program::{
     account_info::{next_account_info, AccountInfo},
@@ -18,6 +17,7 @@ use solana_program::{
     pubkey::Pubkey,
     system_instruction::{self},
     sysvar::Sysvar,
+    sysvar::slot_hashes,hash
 };
 use spl_associated_token_account::{create_associated_token_account, get_associated_token_address};
 use spl_token::instruction as TokenIns;
@@ -52,7 +52,7 @@ impl Processor {
             }
         }
     }
-
+    
     fn process_init_lottery(
         accounts: &[AccountInfo],
         max_amount: u64,
@@ -67,7 +67,7 @@ impl Processor {
         let lottery_pda = next_account_info(account_info_iter)?;
         let lottery_ata = next_account_info(account_info_iter)?;
         let fee_ata = next_account_info(account_info_iter)?;
-        let ata_program = next_account_info(account_info_iter)?;
+        let _ata_program = next_account_info(account_info_iter)?;
         let token_mint = next_account_info(account_info_iter)?;
         let token_program = next_account_info(account_info_iter)?;
         let system_program_account = next_account_info(account_info_iter)?;
@@ -169,6 +169,7 @@ impl Processor {
         lottery_info.token_reciever = lottery_ata.key.clone();
         lottery_info.fee_reciever = fee_ata.key.clone();
         lottery_info.current_amount = 0;
+        lottery_info.token_mint = token_mint.key.clone();
         Lottery::pack(lottery_info, &mut lottery_id.data.borrow_mut())?;
         msg!(&*format!("Pool initialized: {:?}", lottery_id.key));
 
@@ -185,7 +186,7 @@ impl Processor {
         let buyer_token_account = next_account_info(account_info_iter)?;
         let token_program = next_account_info(account_info_iter)?;
         let clock_account = next_account_info(account_info_iter)?;
-        let system_program_account = next_account_info(account_info_iter)?;
+        let _system_program_account = next_account_info(account_info_iter)?;
 
         let rent = next_account_info(account_info_iter)?;
 
@@ -276,15 +277,38 @@ impl Processor {
         Ok(())
     }
 
-    fn process_draw(accounts: &[AccountInfo], program_id: &Pubkey) -> ProgramResult {
+    fn process_draw(accounts: &[AccountInfo], _program_id: &Pubkey) -> ProgramResult {
         let account_info_iter = &mut accounts.iter();
         let lottery_id = next_account_info(account_info_iter)?;
         let authority = next_account_info(account_info_iter)?;
         let clock_account = next_account_info(account_info_iter)?;
+        let slot_hash_account = next_account_info(account_info_iter)?;
         msg!("unpack lottery");
         let mut lottery_info = Lottery::unpack(&lottery_id.data.borrow())?;
         let clock = clock::Clock::from_account_info(clock_account)?;
+        if lottery_info.account_type != 1{
+            msg!("Wrong account type");
+            return Err(ProgramError::InvalidArgument);
+        }
 
+    
+        let mut random_data:Vec<u8>  =vec![];
+        random_data.extend_from_slice(&clock.slot.to_le_bytes());
+        random_data.extend_from_slice(&clock.unix_timestamp.to_le_bytes());
+        random_data.extend_from_slice(&clock.epoch.to_le_bytes());
+        random_data.extend_from_slice(&clock.epoch_start_timestamp.to_le_bytes());
+        random_data.extend_from_slice(&lottery_info.current_amount.to_le_bytes());
+        
+        random_data.extend_from_slice(&slot_hash_account.data.borrow());
+        
+        msg!(&*format!("hashdata: {:?}", hash::hash(&random_data)));
+        msg!("hashing number");
+        let random_number_hash: [u8;8] = hash::hash(&random_data).to_bytes()[0..8].try_into().unwrap();
+        let mut random_number = u64::from_le_bytes(random_number_hash) % lottery_info.current_amount;
+        if random_number == 0{
+            random_number = lottery_info.current_amount;
+        }
+        check_program_account(lottery_id.owner)?;
         if !authority.is_signer && lottery_info.authority != authority.key.clone() {
             msg!("Not authority");
             return Err(ProgramError::MissingRequiredSignature);
@@ -293,11 +317,13 @@ impl Processor {
             || lottery_info.ended_slot > clock.slot)
             && lottery_info.account_type == 1
         {
-            lottery_info.lottery_number = 1;
+            lottery_info.lottery_number = random_number;
             lottery_info.account_type = 3;
+            msg!(&*format!("winner number: {:?}", random_number));
             Lottery::pack(lottery_info, &mut lottery_id.data.borrow_mut())?;
         } else {
             msg!("lottery not ended");
+            return Err(ProgramError::InvalidArgument);
         }
 
         Ok(())
@@ -317,7 +343,7 @@ impl Processor {
         let token_program = next_account_info(account_info_iter)?;
         let system_program_account = next_account_info(account_info_iter)?;
         let rent = next_account_info(account_info_iter)?;
-        let ata_program = next_account_info(account_info_iter)?;
+        let _ata_program = next_account_info(account_info_iter)?;
         let winner_account = next_account_info(account_info_iter)?;
 
         let writable_accounts = vec![
@@ -346,6 +372,7 @@ impl Processor {
                     lottery_authority.clone(),
                     lottery_pda.clone(),
                     winner_ata.clone(),
+                    winner_account.clone(),
                     system_program_account.clone(),
                     rent.clone(),
                     token_program.clone(),

@@ -33,8 +33,8 @@ pub enum LotteryMachineInstructions {
     },
     /// 0.`[writable]` lottery id
     /// 1.`[signer]` pool authority
-
     /// 2.`[]` Sysvar: Clock
+    /// 3.`[]` Sysvar: Slot Hashes
     Draw {},
     /// 0.`[writable]` lottery id
     /// 1.`[writable,signer]` lottery authority
@@ -88,13 +88,5 @@ impl LotteryMachineInstructions {
             .ok_or(InvalidInstruction)?;
         Ok((amount, rest))
     }
-    fn unpack_u8(input: &[u8]) -> Result<(u8, &[u8]), ProgramError> {
-        let (amount, rest) = input.split_at(1);
-        let amount = amount
-            .try_into()
-            .ok()
-            .map(u8::from_le_bytes)
-            .ok_or(InvalidInstruction)?;
-        Ok((amount, rest))
-    }
+    
 }

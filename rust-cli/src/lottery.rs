@@ -11,15 +11,14 @@ use spl_associated_token_account;
 use std::borrow::Borrow;
 use spl_token;
 use solana_sdk::{
-    commitment_config::CommitmentConfig,
+    
     instruction::{AccountMeta, Instruction},
     pubkey::Pubkey,
     signature::{Keypair, Signer},
-    system_instruction::create_account,
     sysvar::{{clock, rent}},
 };
 
-use crate::{lottery, util::{get_pub, getkey, Lottery, Ticket}};
+use crate::{ util::{get_pub, getkey, Lottery, Ticket}};
 pub fn init_lottery(
     slot: u64,
     max_amount: u64,
@@ -209,6 +208,7 @@ pub fn draw(lottery_id:&Pubkey,authority:&Pubkey)-> Vec<Instruction>{
         false,
         false,
     ));
+    keys.push(getkey(solana_program::sysvar::slot_hashes::id(),false,false));
     data.push(2);
     let draw_ins = Instruction {
         program_id: lottery_program_id,
