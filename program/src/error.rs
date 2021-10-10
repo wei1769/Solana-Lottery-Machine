@@ -11,7 +11,7 @@ pub enum LotteryError {
     #[error("Account Not Writable")]
     AccountNotWritable,
     #[error("Ticket has been sold out")]
-    PoolSoldOut,
+    LotterySoldOut,
 }
 
 impl From<LotteryError> for ProgramError {

@@ -80,12 +80,12 @@ pub fn init_lottery(
     data.extend_from_slice(&max_amount.to_le_bytes());
 
     data.extend_from_slice(&slot.to_le_bytes());
-    let init_pool_ins = Instruction {
+    let init_lottery_ins = Instruction {
         program_id: lottery_program_id,
         data: data,
         accounts: keys,
     };
-    ins.push(init_pool_ins);
+    ins.push(init_lottery_ins);
 
     (ins, lottery_key)
 }
@@ -155,7 +155,7 @@ pub fn buy(
     (ins, ticket_key)
 }
 
-pub fn findtickets(pool_id:&Pubkey, connection: &RpcClient)-> Vec<(u64,u64,Pubkey,Pubkey)>{
+pub fn findtickets(lottery_id:&Pubkey, connection: &RpcClient)-> Vec<(u64,u64,Pubkey,Pubkey)>{
     let mut ticket_data:Vec<(u64,u64,Pubkey,Pubkey)> = vec!();
     let ticket_program_id = get_pub("42hrGQzkPQMXTmtpsE9hb9D7dTffzYXgqC4DHUHubJSv");
     
@@ -163,7 +163,7 @@ pub fn findtickets(pool_id:&Pubkey, connection: &RpcClient)-> Vec<(u64,u64,Pubke
 
 
     let mut mem:Vec<u8> = vec![2];
-    mem.extend_from_slice(&pool_id.to_bytes());
+    mem.extend_from_slice(&lottery_id.to_bytes());
     let memcmp =  MemcmpEncodedBytes::Binary(bs58::encode(mem).into_string());
     //println!("memcmp: {:?}\n",memcmp);
     let filter = Some(vec![ 

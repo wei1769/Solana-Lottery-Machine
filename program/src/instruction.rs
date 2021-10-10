@@ -7,8 +7,8 @@ pub enum LotteryMachineInstructions {
     /// 1.`[writable,signer]` lottery authority
     /// 2.`[]` fee authority
     /// 3.`[writable]` lottery PDA
-    /// 4.`[writable]` lottery associated token account
-    /// 5.`[writable]` fee associated token account
+    /// 4.`[writable]` token reciever (ATA owned by lottery PDA, Derived from mint,lottery PDA) 
+    /// 5.`[writable]` fee reciever (ATA owned by fee authority)
     /// 6.`[]` Associated Token Program
     /// 7.`[]` token mint
     /// 8.`[]` token program
@@ -22,8 +22,8 @@ pub enum LotteryMachineInstructions {
     /// 0.`[writable]` lottery id
     /// 1.`[writable,signer]` ticket id
     /// 2.`[writable,signer]` buyer authority
-    /// 3.`[writable]` lottery associated token account
-    /// 4.`[writable]` authority token account
+    /// 3.`[writable]` token reciever (ATA owned by lottery PDA, Derived from mint,lottery PDA)
+    /// 4.`[writable]` buyer token account
     /// 5.`[]` token program
     /// 6.`[]` Sysvar: Clock
     /// 7.`[]` system program
@@ -32,14 +32,14 @@ pub enum LotteryMachineInstructions {
         amount: u64, // amount to participate
     },
     /// 0.`[writable]` lottery id
-    /// 1.`[signer]` pool authority
+    /// 1.`[signer]` lottery authority
     /// 2.`[]` Sysvar: Clock
     /// 3.`[]` Sysvar: Slot Hashes
     Draw {},
     /// 0.`[writable]` lottery id
     /// 1.`[writable,signer]` lottery authority
-    /// 2.`[writable]` lottery associated token account
-    /// 3.`[writable]` fee associated token account
+    /// 2.`[writable]` token reciever (ATA owned by lottery PDA, Derived from mint,lottery PDA)
+    /// 3.`[writable]` fee reciever (ATA owned by fee authority)
     /// 4.`[writable]` winner token account
     /// 5.`[]` winning ticket id
     /// 6.`[]` lottery PDA

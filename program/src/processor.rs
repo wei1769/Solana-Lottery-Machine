@@ -35,7 +35,7 @@ impl Processor {
         check_program_account(program_id)?;
         match instruction {
             LotteryMachineInstructions::InitLottery { max_amount, slot } => {
-                msg!("Instruction: InitPool");
+                msg!("Instruction: Init Lottrey");
                 Self::process_init_lottery(accounts, max_amount, slot, program_id)
             }
             LotteryMachineInstructions::Buy { amount } => {
@@ -171,7 +171,7 @@ impl Processor {
         lottery_info.current_amount = 0;
         lottery_info.token_mint = token_mint.key.clone();
         Lottery::pack(lottery_info, &mut lottery_id.data.borrow_mut())?;
-        msg!(&*format!("Pool initialized: {:?}", lottery_id.key));
+        msg!(&*format!("Lottery initialized, id: {:?}", lottery_id.key));
 
         Ok(())
     }
