@@ -19,6 +19,14 @@ const LOTTERY_LAYOUT = struct([
   publicKey("token_mint"),
 ]);
 
+const TICKET_LAYOUT = struct([
+  u8("account_type"),
+  publicKey("lottery_id"),
+  publicKey("buyer"),
+  u64("start_number"),
+  u64("end_number"),
+]);
+
 class Lottery {
   account_type: number;
   authority: PublicKey;
@@ -50,6 +58,28 @@ class Lottery {
     this.lottery_number = lottery_number;
     this.current_amount = current_amount;
     this.token_mint = token_mint;
+  }
+}
+
+class Ticket {
+  account_type: number;
+  lottery_id: PublicKey;
+  buyer: PublicKey;
+  start_number: number;
+  end_number: number;
+
+  constructor(
+    account_type: number,
+    lottery_id: PublicKey,
+    buyer: PublicKey,
+    start_number: number,
+    end_number: number
+  ) {
+    this.account_type = account_type;
+    this.lottery_id = lottery_id;
+    this.buyer = buyer;
+    this.start_number = start_number;
+    this.end_number = end_number;
   }
 }
 
@@ -92,4 +122,10 @@ export function parseLotteryPoolData(data: any) {
     current_amount,
     token_mint
   );
+}
+
+export function parseTicketData(data: any) {
+  let { account_type, lottery_id, buyer, start_number, end_number } =
+    TICKET_LAYOUT.decode(data);
+  return new Ticket(account_type, lottery_id, buyer, start_number, end_number);
 }

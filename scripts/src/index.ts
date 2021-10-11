@@ -203,14 +203,14 @@ export async function buy(_lotteryPoolId: string, _amount: number) {
     throw new Error("Lottery pool id not found! " + lotteryPoolPublicKey);
 
   const lotteryPoolData = utils.parseLotteryPoolData(lotteryAccountInfo.data);
-  console.log("lottery pool info", lotteryPoolData);
+  // console.log("lottery pool info", lotteryPoolData);
 
   // get my token ata
   // const buyer_token_ata = await utils.findAssociatedTokenAddress(
   //   managerAccount.publicKey,
   //   lotteryPoolData.token_mint
   // );
-  console.log(lotteryPoolData.token_mint.toString());
+  // console.log(lotteryPoolData.token_mint.toString());
   const buyer_token_ata = await connection.getTokenAccountsByOwner(
     managerAccount.publicKey,
     {
@@ -398,13 +398,44 @@ export async function withdraw(_lotteryPoolId: string) {
     throw new Error("Lottery pool id not found! " + lotteryPoolPublicKey);
 
   const lotteryPoolData = utils.parseLotteryPoolData(lotteryAccountInfo.data);
-  console.log("lottery pool info", lotteryPoolData);
+  // console.log("lottery pool info", lotteryPoolData);
 
   // get lottery pda
   const lottery_pda = await PublicKey.findProgramAddress(
     [lotteryPoolPublicKey.toBuffer()],
     lotteryProgramId
   );
+
+  // get winning ticket number
+  const winningTicketNumber = lotteryPoolData.lottery_number;
+
+  // get winning ticket
+  let winningTicketId = new PublicKey(LOTTERY_PUBLIC_KEY); // LOTTERY_PUBLIC_KEY is placeholder
+  let winnerTokenAccount = new PublicKey(LOTTERY_PUBLIC_KEY);
+  let winningBuyerAccount = new PublicKey(LOTTERY_PUBLIC_KEY);
+
+  const programAccounts = await connection.getProgramAccounts(lotteryProgramId);
+  programAccounts.forEach(async (value) => {
+    const ticketData = utils.parseTicketData(value.account.data);
+    if (
+      new BN(ticketData.start_number).lten(winningTicketNumber.valueOf()) &&
+      new BN(ticketData.end_number).gten(winningTicketNumber.valueOf())
+    ) {
+      winningTicketId = value.pubkey;
+      winnerTokenAccount = await utils.findAssociatedTokenAddress(
+        lottery_pda[0],
+        winningTicketId
+      );
+      winningBuyerAccount = ticketData.buyer;
+      console.log("ticket found: ", ticketData.end_number.toString());
+    }
+    console.log(
+      "ticket: ",
+      ticketData.start_number.toString(),
+      winningTicketNumber.toString(),
+      ticketData.end_number.toString()
+    );
+  });
 
   /// 0.`[writable]` lottery id
   /// 1.`[writable,signer]` lottery authority
@@ -437,6 +468,16 @@ export async function withdraw(_lotteryPoolId: string) {
       isWritable: true,
     },
     {
+      pubkey: winnerTokenAccount,
+      isSigner: false,
+      isWritable: true,
+    },
+    {
+      pubkey: winningTicketId,
+      isSigner: false,
+      isWritable: false,
+    },
+    {
       pubkey: lottery_pda[0],
       isSigner: false,
       isWritable: false,
@@ -463,6 +504,11 @@ export async function withdraw(_lotteryPoolId: string) {
     },
     {
       pubkey: new PublicKey("ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL"),
+      isSigner: false,
+      isWritable: false,
+    },
+    {
+      pubkey: winningBuyerAccount,
       isSigner: false,
       isWritable: false,
     },
@@ -520,7 +566,7 @@ const lottery_lotteryPoolId = "97FjhMuEQz8PNSJN1hX9UNsgtwYE6mmXpKXGJaCXgnjS"; //
 // buy(lottery_lotteryPoolId, 1);
 
 // draw from the pool
-draw(lottery_lotteryPoolId);
+// draw(lottery_lotteryPoolId);
 
 // withdraw from the pool
-// withdraw(lottery_lotteryPoolId);
+withdraw(lottery_lotteryPoolId);
