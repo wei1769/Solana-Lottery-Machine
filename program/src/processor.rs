@@ -286,8 +286,12 @@ impl Processor {
         msg!("unpack lottery");
         let mut lottery_info = Lottery::unpack(&lottery_id.data.borrow())?;
         let clock = clock::Clock::from_account_info(clock_account)?;
-        if lottery_info.account_type != 1{
-            msg!("Wrong account type");
+        if lottery_info.account_type == 3  {
+            msg!("Wrong account type, already drawed ");
+            return Err(ProgramError::InvalidArgument);
+        }
+        else if lottery_info.account_type != 1{
+            msg!("Wrong account type ");
             return Err(ProgramError::InvalidArgument);
         }
 
