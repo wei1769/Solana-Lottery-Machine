@@ -205,6 +205,18 @@ export async function buy(_lotteryPoolId: string, _amount: number) {
   const lotteryPoolData = utils.parseLotteryPoolData(lotteryAccountInfo.data);
   console.log("lottery pool info", lotteryPoolData);
 
+  // get my token ata
+  // const buyer_token_ata = await utils.findAssociatedTokenAddress(
+  //   managerAccount.publicKey,
+  //   lotteryPoolData.token_mint
+  // );
+  console.log(lotteryPoolData.token_mint.toString());
+  const buyer_token_ata = await connection.getTokenAccountsByOwner(
+    managerAccount.publicKey,
+    {
+      mint: new PublicKey(WSOL_PUBLIC_KEY_RAW),
+    }
+  );
   // referenced from program/src/instruction.rs
   /// 0.`[writable]` lottery id
   /// 1.`[writable,signer]` ticket id
@@ -233,7 +245,7 @@ export async function buy(_lotteryPoolId: string, _amount: number) {
       isWritable: true,
     },
     {
-      pubkey: lotteryPoolData.token_mint,
+      pubkey: buyer_token_ata.value[0].pubkey,
       isSigner: false,
       isWritable: true,
     },
@@ -388,6 +400,12 @@ export async function withdraw(_lotteryPoolId: string) {
   const lotteryPoolData = utils.parseLotteryPoolData(lotteryAccountInfo.data);
   console.log("lottery pool info", lotteryPoolData);
 
+  // get lottery pda
+  const lottery_pda = await PublicKey.findProgramAddress(
+    [lotteryPoolPublicKey.toBuffer()],
+    lotteryProgramId
+  );
+
   /// 0.`[writable]` lottery id
   /// 1.`[writable,signer]` lottery authority
   /// 2.`[writable]` token reciever (ATA owned by lottery PDA, Derived from mint,lottery PDA)
@@ -419,9 +437,14 @@ export async function withdraw(_lotteryPoolId: string) {
       isWritable: true,
     },
     {
+      pubkey: lottery_pda[0],
+      isSigner: false,
+      isWritable: false,
+    },
+    {
       pubkey: lotteryPoolData.token_mint,
       isSigner: false,
-      isWritable: true,
+      isWritable: false,
     },
     {
       pubkey: new PublicKey("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"),
@@ -493,11 +516,11 @@ const mint_public_key = WSOL_PUBLIC_KEY_RAW; // user can use WSOL to buy tickets
 // init_lottery(mint_public_key, slot, max_amount); // we only need to init once
 
 // buy 1 ticket with 1 WSOL
-const lottery_lotteryPoolId = "HimNHAmWUMK5ez5BfR5SG8725aWnWf9o9p6SWzwnkEU7"; // obtain the lottery pool ID from the init function above
-buy(lottery_lotteryPoolId, 1);
+const lottery_lotteryPoolId = "97FjhMuEQz8PNSJN1hX9UNsgtwYE6mmXpKXGJaCXgnjS"; // obtain the lottery pool ID from the init function above
+// buy(lottery_lotteryPoolId, 1);
 
 // draw from the pool
 draw(lottery_lotteryPoolId);
 
 // withdraw from the pool
-withdraw(lottery_lotteryPoolId);
+// withdraw(lottery_lotteryPoolId);
