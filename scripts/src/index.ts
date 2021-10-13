@@ -401,7 +401,7 @@ export async function withdraw(_lotteryPoolId: string) {
   // console.log("lottery pool info", lotteryPoolData);
 
   // get lottery pda
-  const lottery_pda = await PublicKey.findProgramAddress(
+  const lottery_pda = await PublicKey.createProgramAddress(
     [lotteryPoolPublicKey.toBuffer()],
     lotteryProgramId
   );
@@ -413,27 +413,41 @@ export async function withdraw(_lotteryPoolId: string) {
   let winningTicketId = new PublicKey(LOTTERY_PUBLIC_KEY); // LOTTERY_PUBLIC_KEY is placeholder
   let winnerTokenAccount = new PublicKey(LOTTERY_PUBLIC_KEY);
   let winningBuyerAccount = new PublicKey(LOTTERY_PUBLIC_KEY);
-
-  const programAccounts = await connection.getProgramAccounts(lotteryProgramId);
+  let filters = [
+    {
+      memcmp: {
+        offset: 1,
+        bytes: lotteryPoolPublicKey.toBase58(),
+      },
+    },
+    {
+      dataSize: 81,
+    },
+  ]
+  const programAccounts = await connection.getProgramAccounts(lotteryProgramId,{filters});
   programAccounts.forEach(async (value) => {
     const ticketData = utils.parseTicketData(value.account.data);
+    console.log(new BN(ticketData.start_number).lten(winningTicketNumber.valueOf()) &&
+    new BN(ticketData.end_number).gten(winningTicketNumber.valueOf()))
     if (
-      new BN(ticketData.start_number).lten(winningTicketNumber.valueOf()) &&
-      new BN(ticketData.end_number).gten(winningTicketNumber.valueOf())
+      ticketData.start_number <= winningTicketNumber &&
+      ticketData.end_number >= winningTicketNumber
     ) {
       winningTicketId = value.pubkey;
       winnerTokenAccount = await utils.findAssociatedTokenAddress(
-        lottery_pda[0],
-        winningTicketId
+        ticketData.buyer,
+        lotteryPoolData.token_mint,
       );
       winningBuyerAccount = ticketData.buyer;
       console.log("ticket found: ", ticketData.end_number.toString());
     }
     console.log(
       "ticket: ",
-      ticketData.start_number.toString(),
-      winningTicketNumber.toString(),
-      ticketData.end_number.toString()
+      winningTicketNumber,
+      programAccounts[0].pubkey.toBase58(),
+      winnerTokenAccount.toBase58(),
+      winningBuyerAccount.toBase58(),
+      lottery_pda.toBase58(),
     );
   });
 
@@ -450,6 +464,14 @@ export async function withdraw(_lotteryPoolId: string) {
   /// 10.`[]` Sysvar Rent
   /// 11.`[]` Associated Token Program
   /// 12.`[]` Winner account
+  console.log(
+    "ticket: ",
+    winningTicketNumber,
+    programAccounts[0].pubkey.toBase58(),
+    winnerTokenAccount.toBase58(),
+    winningBuyerAccount.toBase58(),
+    lottery_pda.toBase58(),
+  );
   const keys: AccountMeta[] = [
     {
       pubkey: lotteryPoolPublicKey,
@@ -478,7 +500,7 @@ export async function withdraw(_lotteryPoolId: string) {
       isWritable: false,
     },
     {
-      pubkey: lottery_pda[0],
+      pubkey: lottery_pda,
       isSigner: false,
       isWritable: false,
     },
