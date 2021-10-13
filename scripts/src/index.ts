@@ -423,12 +423,18 @@ export async function withdraw(_lotteryPoolId: string) {
     {
       dataSize: 81,
     },
-  ]
-  const programAccounts = await connection.getProgramAccounts(lotteryProgramId,{filters});
-  programAccounts.forEach(async (value) => {
+  ];
+  const programAccounts = await connection.getProgramAccounts(
+    lotteryProgramId,
+    { filters }
+  );
+  for (let i = 0; i < programAccounts.length; i++) {
+    let value = programAccounts[i];
     const ticketData = utils.parseTicketData(value.account.data);
-    console.log(new BN(ticketData.start_number).lten(winningTicketNumber.valueOf()) &&
-    new BN(ticketData.end_number).gten(winningTicketNumber.valueOf()))
+    console.log(
+      new BN(ticketData.start_number).lten(winningTicketNumber.valueOf()) &&
+        new BN(ticketData.end_number).gten(winningTicketNumber.valueOf())
+    );
     if (
       ticketData.start_number <= winningTicketNumber &&
       ticketData.end_number >= winningTicketNumber
@@ -436,7 +442,7 @@ export async function withdraw(_lotteryPoolId: string) {
       winningTicketId = value.pubkey;
       winnerTokenAccount = await utils.findAssociatedTokenAddress(
         ticketData.buyer,
-        lotteryPoolData.token_mint,
+        lotteryPoolData.token_mint
       );
       winningBuyerAccount = ticketData.buyer;
       console.log("ticket found: ", ticketData.end_number.toString());
@@ -447,9 +453,9 @@ export async function withdraw(_lotteryPoolId: string) {
       programAccounts[0].pubkey.toBase58(),
       winnerTokenAccount.toBase58(),
       winningBuyerAccount.toBase58(),
-      lottery_pda.toBase58(),
+      lottery_pda.toBase58()
     );
-  });
+  }
 
   /// 0.`[writable]` lottery id
   /// 1.`[writable,signer]` lottery authority
@@ -470,7 +476,7 @@ export async function withdraw(_lotteryPoolId: string) {
     programAccounts[0].pubkey.toBase58(),
     winnerTokenAccount.toBase58(),
     winningBuyerAccount.toBase58(),
-    lottery_pda.toBase58(),
+    lottery_pda.toBase58()
   );
   const keys: AccountMeta[] = [
     {
