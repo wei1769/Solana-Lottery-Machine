@@ -111,7 +111,7 @@ pub fn buy(
     let mut data: Vec<u8> = vec![];
     let mut keys: Vec<AccountMeta> = vec![];
     
-    println!("Lottery info current :{:?},  max:{:?}",lottery_info.current_amount, lottery_info.max_amount);
+    //println!("Lottery info current :{:?},  max:{:?}",lottery_info.current_amount, lottery_info.max_amount);
 
     data.push(1);
     data.extend_from_slice(&amount.to_le_bytes());

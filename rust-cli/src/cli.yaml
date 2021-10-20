@@ -14,7 +14,8 @@ args:
         takes_value: true
         value_name: LAMPORT
         about: amounts of lamport to wrap 
-
+    - mainnet:
+        about: change RPC to mainnet-beta
 subcommands:
     - init:
         about: initialize a lottery pool

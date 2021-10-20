@@ -38,7 +38,11 @@ fn main() {
     let mut signer: Vec<&Keypair> = vec![&key_pair];
     
     // change RPC endpoint here
-    let rpc_url: String = "https://api.devnet.solana.com".to_string();
+    let mut rpc_url: String = "https://api.devnet.solana.com".to_string();
+    if matches.is_present("mainnet"){
+        // read key from arg
+        rpc_url = "https://api.mainnet-beta.solana.com".to_string();
+    }
     let commitment = CommitmentConfig::confirmed();
     let rpc_client = RpcClient::new_with_commitment(rpc_url, commitment);
     
@@ -131,7 +135,7 @@ fn main() {
 
 
         let send = rpc_client.send_and_confirm_transaction_with_spinner(&tx);
-        println!("tx: {:?} \nresult:{:?}",messagee, send);
+        println!("result:{:?}", send);
     }
     
     

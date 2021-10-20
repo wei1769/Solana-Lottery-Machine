@@ -74,13 +74,13 @@ impl Processor {
         let clock_account = next_account_info(account_info_iter)?;
         let rent = next_account_info(account_info_iter)?;
 
-        msg!("account all unpacked");
+        //msg!("account all unpacked");
 
         let writable_accounts = vec![lottery_id, authority, lottery_ata, fee_ata];
         if Self::check_writable(writable_accounts) {
             return Err(ProgramError::InvalidAccountData);
         }
-        msg!("writable_accounts cheked");
+        //msg!("writable_accounts cheked");
         let rent_info = Rent::from_account_info(rent)?;
         let create_inx = system_instruction::create_account(
             authority.key,
@@ -89,7 +89,7 @@ impl Processor {
             Lottery::LEN.try_into().unwrap(),
             program_id,
         );
-        msg!("Create Lottery accounts");
+        //msg!("Create Lottery accounts");
 
         invoke(&create_inx, &[lottery_id.clone(), authority.clone()])?;
         let mut lottery_info = Lottery::unpack_unchecked(&lottery_id.data.borrow())?;
@@ -100,19 +100,19 @@ impl Processor {
         if !authority.is_signer {
             return Err(ProgramError::MissingRequiredSignature);
         }
-        msg!("All account type is good");
+        //msg!("All account type is good");
         let pda =
             Pubkey::create_program_address(&[&lottery_id.key.to_bytes().clone()], program_id)?;
         if lottery_pda.key.clone() != pda {
             return Err(ProgramError::InvalidAccountData);
         }
-        msg!("PDA created");
+        //msg!("PDA created");
         check_fee_account(fee_authority.key)?;
 
         if get_associated_token_address(fee_authority.key, token_mint.key) != fee_ata.key.clone() {
             return Err(ProgramError::InvalidAccountData);
         }
-        msg!("fee_ata is right");
+        //msg!("fee_ata is right");
         if fee_ata.owner != token_program.key {
             let fee_ata_ix = create_associated_token_account(
                 authority.key,
@@ -160,7 +160,7 @@ impl Processor {
 
         let slot_ended = clock_info.slot.checked_add(slot).unwrap();
 
-        msg!("writing data to lottery info");
+        //msg!("writing data to lottery info");
         lottery_info.account_type = 1;
         lottery_info.authority = authority.key.clone();
         lottery_info.lottery_number = 0;
@@ -172,6 +172,7 @@ impl Processor {
         lottery_info.token_mint = token_mint.key.clone();
         Lottery::pack(lottery_info, &mut lottery_id.data.borrow_mut())?;
         msg!(&*format!("Lottery initialized, id: {:?}", lottery_id.key));
+        msg!(&*format!("Max amount: {:?}, ended slot: {:?}", max_amount,slot_ended));
 
         Ok(())
     }
@@ -190,7 +191,7 @@ impl Processor {
 
         let rent = next_account_info(account_info_iter)?;
 
-        msg!("accounts all unpacked");
+        //msg!("accounts all unpacked");
         let writable_accounts = vec![
             lottery_id,
             ticket_id,
@@ -212,13 +213,13 @@ impl Processor {
                 Ticket::LEN.try_into().unwrap(),
                 program_id,
             );
-            msg!("Create Lottery accounts");
+            //msg!("Create Lottery accounts");
 
             invoke(&create_inx, &[ticket_id.clone(), buy_authority.clone()])?;
         }
         check_program_account(lottery_id.owner)?;
         check_program_account(ticket_id.owner)?;
-        msg!("writable accounts cheked");
+       // msg!("writable accounts cheked");
 
         let mut lottery_info = Lottery::unpack_unchecked(&lottery_id.data.borrow())?;
 
@@ -272,8 +273,11 @@ impl Processor {
         let end_unmber = amount.checked_add(lottery_info.current_amount).unwrap();
         lottery_info.current_amount = end_unmber.clone();
         ticket_info.end_number = end_unmber.clone();
+        msg!(&*format!("your ticket number start from {:?} to {:?}", lottery_info.current_amount.clone(),end_unmber));
         Ticket::pack(ticket_info, &mut ticket_id.data.borrow_mut())?;
         Lottery::pack(lottery_info, &mut lottery_id.data.borrow_mut())?;
+        
+
         Ok(())
     }
 

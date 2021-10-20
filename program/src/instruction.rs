@@ -62,8 +62,8 @@ impl LotteryMachineInstructions {
             0 => {
                 let (max, rest) = Self::unpack_u64(rest).unwrap();
                 let slot = Self::unpack_u64(rest).unwrap().0;
-                let message = format(format_args!("slot_ended: {:?}", slot));
-                msg!(&message);
+                //let message = format(format_args!("slot_ended: {:?}, max", slot));
+                //msg!(&message);
                 Self::InitLottery {
                     max_amount: max,
                     slot: slot,
