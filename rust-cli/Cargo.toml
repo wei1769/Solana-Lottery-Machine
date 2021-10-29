@@ -6,14 +6,14 @@ edition = "2018"
 
 
 [dependencies]
-solana-client = "1.7.10"
-solana-cli-config = "1.7.10"
-solana-sdk = "1.7.10"
+solana-client = "1.8.2"
+solana-cli-config = "1.8.2"
+solana-sdk = "1.8.2"
 spl-token = "3.2.0"
 spl-associated-token-account = "1.0.3"
 base64 ="0.13.0"
 arrayref = "0.3.6"
-solana-account-decoder = "1.7.11"
+solana-account-decoder = "1.8.2"
 bs58 = "0.4.0"
-solana-program = "=1.7.14"
+solana-program = "=1.8.2"
 clap = {version ="3.0.0-beta.4", features = ["yaml"]}

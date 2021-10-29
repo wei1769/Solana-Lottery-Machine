@@ -1,11 +1,11 @@
 use std::borrow::Borrow;
 use base64::encode;
 use solana_account_decoder::parse_token::spl_token_v2_0_native_mint;
-use solana_program::{ pubkey::Pubkey, system_instruction};
+use solana_program::{  system_instruction};
 use solana_client::rpc_client::RpcClient;
 use solana_sdk::{ commitment_config::CommitmentConfig, instruction::Instruction, signature::{Keypair, Signer}, transaction::Transaction};
 use clap::{App, load_yaml};
-use crate::util::{get_pub};
+use crate::{ util::{ get_pub}};
 mod util;
 mod lottery;
 
@@ -14,7 +14,7 @@ fn main() {
     let yaml = load_yaml!("cli.yaml");
     let matches = App::from(yaml).get_matches();
     
-    let mut key_pair = Keypair::new();
+    let key_pair ;
 
     if matches.is_present("private"){
         // read key from arg
@@ -38,7 +38,7 @@ fn main() {
     let mut signer: Vec<&Keypair> = vec![&key_pair];
     
     // change RPC endpoint here
-    let mut rpc_url: String = "https://api.devnet.solana.com".to_string();
+    let mut rpc_url: String = "https://api.testnet.solana.com".to_string();
     if matches.is_present("mainnet"){
         // read key from arg
         rpc_url = "https://api.mainnet-beta.solana.com".to_string();
@@ -74,9 +74,10 @@ fn main() {
 
     }
     
-    let mut lottery_id = Pubkey::default();
+    let  lottery_id ;
     // This is for buy, draw, withdraw
-    let mut  instruction_signer = Keypair::new();
+    let  instruction_signer ;
+
     if let Some(ref matches) = matches.subcommand_matches("init"){
         let lottery_max_amount:u64 = matches.value_of("max_amount").unwrap().parse().unwrap();
         let slot_last:u64 = matches.value_of("slot_last").unwrap().parse().unwrap();
@@ -110,7 +111,7 @@ fn main() {
         let mut withdraw_ins = lottery::withdraw(&lottery_id, &wallet_publickey, rpc_client.borrow());
         ins.append(&mut withdraw_ins);
     }
-    else if let Some(ref matches) = matches.subcommand_matches("find") {
+    else if let Some(ref _matches) = matches.subcommand_matches("find") {
         lottery_id = get_pub(matches.value_of("lottery_id").unwrap());
 
         let tickets = lottery::findtickets(&lottery_id, rpc_client.borrow());
@@ -119,8 +120,49 @@ fn main() {
         println!("{:?},{:?},{:?},{:?}", data.0, data.1,data.2,data.3);
         }
     }
+    else if let Some(ref _matches) = matches.subcommand_matches("draw_all") {
+        let ended_lotterys = lottery::get_ended_lotterys(&wallet_publickey, rpc_client.borrow());
+        for id in ended_lotterys{
+            let mut draw_ins = lottery::draw(&id, &wallet_publickey,);
+            ins.append(&mut draw_ins);
 
+        }
+    }
+    else if let Some(ref _matches) = matches.subcommand_matches("withdraw_all"){
+        let withdrawble_lottery = lottery::get_withdrable_lotterys(&wallet_publickey, rpc_client.borrow());
+        for id in withdrawble_lottery{
+            let mut withdraw_ins = lottery::withdraw(&id, &wallet_publickey, rpc_client.borrow());
+            ins.append(&mut withdraw_ins);
+            if ins.len()>2 {
+                break;
+            }
 
+        }
+    }
+    else if let Some(ref _matches) = matches.subcommand_matches("close_all") {
+        let tickets = lottery::find_closable_tickets(&wallet_publickey,rpc_client.borrow() );
+        println!("\n{:?}\n",tickets);
+        for i in tickets{
+            let mut close_ins = lottery::close(&i.0, &i.1, &wallet_publickey );
+            ins.append(&mut close_ins);
+            if ins.len()>10 {
+                break;
+            }
+        }
+    }   
+    else if let Some(ref _matches) = matches.subcommand_matches("close_every") {
+        let tickets = lottery::find_all_closable_tickets(rpc_client.borrow() );
+        //println!("\n{:?}\n",tickets);
+        for i in tickets{
+            let mut close_ins = lottery::close(&i.0, &i.1, &i.2 );
+            ins.append(&mut close_ins);
+            if ins.len()>10 {
+                break;
+            }
+        }
+    }   
+    
+    //print!("{:?},{:?}",get_ended_lotterys(&wallet_publickey, rpc_client.borrow()),wallet_publickey);
     if !ins.is_empty(){
         let mut tx = Transaction::new_with_payer(&ins, fee_payer);
         let (recent, _fee) = rpc_client
@@ -135,7 +177,7 @@ fn main() {
 
 
         let send = rpc_client.send_and_confirm_transaction_with_spinner(&tx);
-        println!("result:{:?}", send);
+        println!("result:{:?}\n {:?} \n", send ,messagee );
     }
     
     

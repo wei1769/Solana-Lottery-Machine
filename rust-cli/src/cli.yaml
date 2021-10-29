@@ -73,3 +73,11 @@ subcommands:
             about: lottery id to find
             required: true
             takes_value: true
+    - draw_all:
+        about: draw all lottery avalible
+    - withdraw_all:
+        about: withdraw all lottery avalible
+    - close_all:
+        about: close all available owned by wallet
+    - close_every:
+        about: close all available on chain
