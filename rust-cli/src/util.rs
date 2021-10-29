@@ -1,5 +1,5 @@
 use solana_sdk::{
-    instruction::{AccountMeta},
+    instruction::AccountMeta,
     pubkey::Pubkey,
     signature::{read_keypair_file, Keypair},
 };
@@ -25,7 +25,6 @@ pub fn load_config_keypair() -> Keypair {
 use solana_program::{
     program_error::ProgramError,
     program_pack::{IsInitialized, Pack, Sealed},
-    
 };
 
 use arrayref::{array_mut_ref, array_ref, array_refs, mut_array_refs};
@@ -38,8 +37,7 @@ pub struct Lottery {
     pub ended_slot: u64,        //size:8
     pub lottery_number: u64,    //size:8
     pub current_amount: u64,    //size:8
-    pub token_mint: Pubkey
-                                //Lottery account size should be 161 Bytes
+    pub token_mint: Pubkey,     //Lottery account size should be 161 Bytes
 }
 pub struct Ticket {
     pub account_type: u8,   //2 is Ticket size:1
@@ -122,8 +120,8 @@ impl Pack for Lottery {
             _ended_slot,
             _lottery_number,
             _current_amount,
-            _token_mint
-        ) = array_refs![src, 1, 32, 32, 32, 8, 8, 8, 8,32];
+            _token_mint,
+        ) = array_refs![src, 1, 32, 32, 32, 8, 8, 8, 8, 32];
 
         let account_type = u8::from_le_bytes(*_account_type);
 
@@ -144,7 +142,7 @@ impl Pack for Lottery {
             ended_slot,
             lottery_number,
             current_amount,
-            token_mint
+            token_mint,
         })
     }
     fn pack_into_slice(&self, dst: &mut [u8]) {
@@ -159,8 +157,8 @@ impl Pack for Lottery {
             _ended_slot_dst,
             _lottery_number_dst,
             _current_amount_dst,
-            _token_mint_dst
-        ) = mut_array_refs![dst, 1, 32, 32, 32, 8, 8, 8, 8,32];
+            _token_mint_dst,
+        ) = mut_array_refs![dst, 1, 32, 32, 32, 8, 8, 8, 8, 32];
 
         let Lottery {
             account_type,
