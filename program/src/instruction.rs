@@ -1,7 +1,6 @@
 use crate::error::LotteryError::InvalidInstruction;
-use solana_program::{msg, program_error::ProgramError, program_pack::Sealed};
+use solana_program::{ program_error::ProgramError};
 use std::convert::TryInto;
-use std::fmt::format;
 pub enum LotteryMachineInstructions {
     /// 0.`[writable,signer]` lottery id
     /// 1.`[writable,signer]` lottery authority

@@ -16,7 +16,6 @@ use solana_program::{
     program_pack::Pack,
     pubkey::Pubkey,
     system_instruction::{self},
-    sysvar::slot_hashes,
     sysvar::Sysvar,
 };
 use spl_associated_token_account::{create_associated_token_account, get_associated_token_address};
@@ -504,7 +503,7 @@ impl Processor {
         Ok(())
     }
 
-    fn process_close_ticket(accounts: &[AccountInfo], program_id: &Pubkey)-> ProgramResult {
+    fn process_close_ticket(accounts: &[AccountInfo], _program_id: &Pubkey)-> ProgramResult {
         let account_info_iter = &mut accounts.iter();
         let lottery_id = next_account_info(account_info_iter)?;
         let ticket_id = next_account_info(account_info_iter)?;
