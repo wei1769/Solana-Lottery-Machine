@@ -31,7 +31,7 @@ impl Sealed for Ticket {}
 
 impl IsInitialized for Ticket {
     fn is_initialized(&self) -> bool {
-        self.account_type != 0
+        self.account_type == 2
     }
 }
 

@@ -1,5 +1,5 @@
 use crate::error::LotteryError::InvalidInstruction;
-use solana_program::{msg, program_error::ProgramError};
+use solana_program::{msg, program_error::ProgramError, program_pack::Sealed};
 use std::convert::TryInto;
 use std::fmt::format;
 pub enum LotteryMachineInstructions {
@@ -50,6 +50,8 @@ pub enum LotteryMachineInstructions {
     /// 11.`[]` Associated Token Program
     /// 12.`[]` Winner account
     Withdraw {},
+
+    Close {},
 }
 impl LotteryMachineInstructions {
     pub fn unpack(input: &[u8]) -> Result<Self, ProgramError> {
@@ -75,7 +77,7 @@ impl LotteryMachineInstructions {
             }
             2 => Self::Draw {},
             3 => Self::Withdraw {},
-
+            4 => Self::Close {},
             _ => return Err(InvalidInstruction.into()),
         })
     }
